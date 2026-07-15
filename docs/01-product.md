@@ -10,7 +10,7 @@ Install once → browse privately → hold/receive bitcoin in the Vault.
 
 ## Engine stance
 
-- **Trunk (this repo):** Electron Wave 1 — public product preview.
+- **This repo:** Electron Wave 1 — public product preview.
 - **Next:** multi-engine bake-off. Chromium/Brave-core is a candidate, not destiny.
 - Product identity stays **privacy browser + Bitcoin Vault**, independent of which engine wins.
 

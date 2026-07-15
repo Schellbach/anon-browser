@@ -1,6 +1,6 @@
 # Anon Browser — Build Plan (agent handoff)
 
-**Status:** Wave 1 Electron trunk is shippable. Wave 2 = engine bake-off — Chromium is one option, not destiny.  
+**Status:** Wave 1 Electron app is shippable. Wave 2 = engine bake-off — Chromium is one option, not destiny.  
 **Codename:** Anon Browser  
 **Workspace:** `/Users/ras/.cursor/plans/anonbrowser`  
 **Related:** [Coinclave](../coinclave/) (appliance / bank — separate product), [anoncomputer.com](https://anoncomputer.com)
@@ -9,18 +9,18 @@
 
 ## 1. Thesis
 
-**Anon is a standalone privacy browser with a built-in Bitcoin Vault — product trunk on Electron now; engines chosen by bake-off, with frontier agents as leverage, not as the pitch.**
+**Anon is a standalone privacy browser with a built-in Bitcoin Vault — shipping on Electron now; engines chosen by bake-off, with frontier agents as leverage, not as the pitch.**
 
 Users should get:
 
-- A real app they can install and try (Wave 1 Electron trunk)
+- A real app they can install and try (Wave 1 Electron)
 - Shields that stop trackers / scareware redirects
 - A real Bitcoin Vault (receive / send / watch-only) — amounts in sats or BTC
 - Anon brand (annona mark)
 
 **Not** an “AI browser.” **Not** a Coin Standard marketing vehicle. LLMs/agents are **build leverage**. The product is: **private browser + Bitcoin Vault**.
 
-**Why Electron on GitHub is justified:** it is the **product trunk** — Vault, shields, Tor windows, packaging — while a parallel **engine portfolio** finds what agents can keep green without marrying Chromium rebase risk early.
+**Why Electron on GitHub is justified:** this is the **current product** — Vault, shields, Tor windows, packaging — while a parallel **engine portfolio** finds what agents can keep green without marrying Chromium rebase risk early.
 
 ---
 
@@ -32,7 +32,7 @@ Users should get:
 | Business model | Free to use; no BAT / Rewards / attention token (internal constraint, not the pitch) |
 | Money UX | Integer sats on-chain; UI shows sats or BTC via `vault/coins.js` |
 | Brand | Anon / annona mark; copper `#C17F59`, seal green `#3D8B6E` — use sparingly; chrome stays utilitarian |
-| Engine path | **Trunk:** Electron Wave 1 (this repo). **Next:** multi-engine bake-off. Chromium/Brave-core is *a candidate*, not the only exit. |
+| Engine path | **Current:** Electron Wave 1 (this repo). **Next:** multi-engine bake-off. Chromium/Brave-core is *a candidate*, not the only exit. |
 | Bake-off candidates | Electron deepen · CEF/embedded Chromium · system WebView · Gecko fork · Ladybird · Servo experiments · hybrid (hard pages on borrow-engine, Anon chrome + Vault owned) |
 | Score bake-off on | Real-site load · Vault key isolation · agent-maintainability week-to-week · privacy controls · packaging cost |
 | Vault v1 | Hot wallet / watch-receive in browser; Coinclave Vault app remains the bank for keys on appliance |
@@ -140,7 +140,7 @@ Goal: someone can download Anon and use it as a Bitcoin privacy browser preview.
 
 Goal: keep **more than one** engine option alive; pick a successor (or hybrid) by evidence — not by Chromium destiny.
 
-Electron remains the **public product trunk** until a candidate beats it on the scorecard below.
+Electron remains the **public product** until a candidate beats it on the scorecard below.
 
 | Candidate | Hypothesis | Kill criteria |
 |---|---|---|
@@ -166,7 +166,7 @@ Electron remains the **public product trunk** until a candidate beats it on the 
 - Fingerprint resistance defaults (honest docs — no Camoufox claims)
 - Optional local “page risk” assist — user-gated, no cloud by default
 - Coinclave Sanctum: watch-only browser wallet; spend via Vault app
-- Keep Electron preview as legacy if trunk moved
+- Keep Electron preview as legacy if the product moves to another engine
 
 ### Wave 4 — Coinclave + Hunter
 
@@ -199,7 +199,7 @@ Electron remains the **public product trunk** until a candidate beats it on the 
     clearnet / .onion
 ```
 
-**Trunk** implements this in Electron (BrowserView + main-process vault).  
+**This app** implements that in Electron (BrowserView + main-process vault).  
 **Bake-off winners** must map the same boundaries onto whatever engine is chosen (content untrusted; Vault privileged; no keys in agent context).
 
 ---
@@ -242,7 +242,7 @@ A prospective user can:
 
 When a coding harness picks this up:
 
-1. **Electron trunk first** — polish Wave 1 gaps (DMG, destroy-wallet UI, signing when certs exist). Public GitHub is intentional.
+1. **Electron app first** — polish Wave 1 gaps (DMG, destroy-wallet UI, signing when certs exist). Public GitHub is intentional.
 2. **Wave 2 = bake-off spikes**, not “bootstrap Brave-core by default.”
 3. Prefer vertical slices users can click; for engines, prefer scored spikes over manifesto forks.
 4. Keep UI deslopped: utilitarian chrome, no marketing landing pages in-app.
@@ -259,7 +259,7 @@ When a coding harness picks this up:
 | 0 Spec + brand | Done |
 | 0.1 Electron MVP | Done |
 | 0.2 Private / bookmarks / history / Tor / deslop | Done |
-| 1 Viable Electron trunk (shields + vault + package) | **Done — GitHub-justified product preview** |
+| 1 Viable Electron app (shields + vault + package) | **Done — public product preview** |
 | **2 Engine bake-off (portfolio)** | **Next** |
 | 3 Feature-rich daily driver (on winner) | After bake-off |
 | 4 Coinclave Sanctum / Hunter | Later |

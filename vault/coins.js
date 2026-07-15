@@ -22,21 +22,53 @@ function formatCoin(sats) {
 /**
  * Parse user input like "5000", "5000 sats", "0.01 BTC", "₿ 1.5" into sats.
  * Legacy ¢ (1 coin = 1 sat) is still accepted.
+ * 
+ * Security: Uses bigint-only arithmetic. No IEEE floats. Rejects over-precision
+ * (>8 decimals for BTC) rather than silently rounding.
+ * 
  * @param {string} input
  * @returns {bigint | null}
  */
 function parseCoinInput(input) {
   const raw = String(input).trim().replace(/,/g, '');
   if (!raw) return null;
+  
+  // BTC amount (₿ or btc suffix)
   if (/^₿/.test(raw) || /btc/i.test(raw)) {
     const num = raw
       .replace(/^₿\s*/i, '')
       .replace(/\s*btc\s*/i, '')
       .trim();
-    const f = Number(num);
-    if (!Number.isFinite(f) || f < 0) return null;
-    return BigInt(Math.round(f * Number(SATS_PER_BTC)));
+    
+    // Parse as decimal string without float conversion
+    const parts = num.split('.');
+    if (parts.length > 2) return null; // multiple decimal points
+    
+    const wholePart = parts[0] || '0';
+    const fracPart = parts[1] || '';
+    
+    // Validate: only digits
+    if (!/^\d+$/.test(wholePart)) return null;
+    if (fracPart && !/^\d+$/.test(fracPart)) return null;
+    
+    // Reject over-precision (>8 decimal places)
+    if (fracPart.length > 8) return null;
+    
+    // Convert to sats using bigint arithmetic
+    // BTC whole part → sats
+    const wholeSats = BigInt(wholePart) * SATS_PER_BTC;
+    
+    // BTC fractional part → sats (pad to 8 decimals)
+    const fracPadded = fracPart.padEnd(8, '0');
+    const fracSats = BigInt(fracPadded);
+    
+    const total = wholeSats + fracSats;
+    if (total < 0n) return null;
+    
+    return total;
   }
+  
+  // Sats amount (plain number or with sats/coins suffix)
   const digits = raw
     .replace(/^¢\s*/i, '')
     .replace(/\s*sats?\s*/i, '')

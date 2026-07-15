@@ -2,7 +2,7 @@
   "name": "anon-browser",
   "productName": "Anon",
   "version": "0.3.0",
-  "description": "Anon Browser — Chromium privacy browser with Coin Standard Vault",
+  "description": "Anon Browser — privacy browser with a built-in Bitcoin Vault",
   "main": "src/main.js",
   "author": "Anon Computer, Inc.",
   "license": "MIT",

@@ -1,5 +1,6 @@
 node_modules/
 dist/
+site/dist/
 .DS_Store
 *.log
 .vault-test/
@@ -10,3 +11,6 @@ dist/
 .env
 .env.*
 !.env.example
+
+# Local Netlify folder
+.netlify

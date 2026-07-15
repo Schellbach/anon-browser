@@ -4,7 +4,7 @@
 
 - Browsing privacy (trackers, scareware redirects)
 - Vault passphrase and BIP39 seed / account xpub
-- Coin Standard balances and receive addresses
+- Bitcoin balances and receive addresses
 
 ## Trust boundaries
 

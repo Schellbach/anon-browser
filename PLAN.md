@@ -1,26 +1,26 @@
 # Anon Browser — Build Plan (agent handoff)
 
-**Status:** Wave 1 Electron trunk is shippable (GitHub-justified preview). Wave 2 = engine bake-off — Chromium is one option, not destiny.  
+**Status:** Wave 1 Electron trunk is shippable. Wave 2 = engine bake-off — Chromium is one option, not destiny.  
 **Codename:** Anon Browser  
 **Workspace:** `/Users/ras/.cursor/plans/anonbrowser`  
-**Related:** [Coinclave](../coinclave/), [anon-computer.netlify.app](https://anon-computer.netlify.app/), [Coin Standard](https://coinsymbol.wtf)
+**Related:** [Coinclave](../coinclave/) (appliance / bank — separate product), [anoncomputer.com](https://anoncomputer.com)
 
 ---
 
 ## 1. Thesis
 
-**A free privacy browser whose reason to exist is Coin Standard Bitcoin (¢/₿) — product trunk on Electron now; engines chosen by bake-off, with frontier agents as leverage, not as the pitch.**
+**Anon is a standalone privacy browser with a built-in Bitcoin Vault — product trunk on Electron now; engines chosen by bake-off, with frontier agents as leverage, not as the pitch.**
 
-Users searching for a Bitcoin privacy browser should get:
+Users should get:
 
 - A real app they can install and try (Wave 1 Electron trunk)
 - Shields that stop trackers / scareware redirects
-- Money denominated and spent in **¢ / ₿** (never BAT, never ad-rewards)
-- Anon brand (annona mark), no surveillance business model
+- A real Bitcoin Vault (receive / send / watch-only) — amounts in sats or BTC
+- Anon brand (annona mark)
 
-**Not** an “AI browser.” LLMs/agents are **build leverage** (filters, Vault, tests, engine experiments, packaging). The shipped category is: **private browser + Bitcoin**.
+**Not** an “AI browser.” **Not** a Coin Standard marketing vehicle. LLMs/agents are **build leverage**. The product is: **private browser + Bitcoin Vault**.
 
-**Why Electron on GitHub is justified:** it is the **product trunk** — Vault, Coin Standard UX, shields, Tor windows, packaging — while a parallel **engine portfolio** finds what agents can keep green without marrying Chromium rebase risk early.
+**Why Electron on GitHub is justified:** it is the **product trunk** — Vault, shields, Tor windows, packaging — while a parallel **engine portfolio** finds what agents can keep green without marrying Chromium rebase risk early.
 
 ---
 
@@ -28,9 +28,9 @@ Users searching for a Bitcoin privacy browser should get:
 
 | Decision | Choice |
 |---|---|
-| Category | Privacy browser + Bitcoin-native (Origin-*shaped* UX, not Brave-locked) |
-| Business model | Free; no ads, no attention token, no Rewards |
-| Money UX | Coin Standard only (`₿ 1 = ¢ 100,000,000`) — see `vault/coins.js` |
+| Category | Standalone privacy browser with Bitcoin Vault (Origin-*shaped* UX, not Brave-locked) |
+| Business model | Free to use; no BAT / Rewards / attention token (internal constraint, not the pitch) |
+| Money UX | Integer sats on-chain; UI shows sats or BTC via `vault/coins.js` |
 | Brand | Anon / annona mark; copper `#C17F59`, seal green `#3D8B6E` — use sparingly; chrome stays utilitarian |
 | Engine path | **Trunk:** Electron Wave 1 (this repo). **Next:** multi-engine bake-off. Chromium/Brave-core is *a candidate*, not the only exit. |
 | Bake-off candidates | Electron deepen · CEF/embedded Chromium · system WebView · Gecko fork · Ladybird · Servo experiments · hybrid (hard pages on borrow-engine, Anon chrome + Vault owned) |
@@ -39,7 +39,7 @@ Users searching for a Bitcoin privacy browser should get:
 | Agent surface | Discreet toolbar stub OK; **not** the marketing pitch; keys never in agent context |
 | Search | Silent private search backend; UI says only “Search” |
 | Telemetry | Off by default; no P3A-style ping in Anon builds |
-| Out of scope | Camoufox / anti-detect product line; BAT/Rewards clone; agent-harness as product identity; declaring one engine “forever” before bake-off |
+| Out of scope | Camoufox / anti-detect; BAT/Rewards clone; agent-harness as product identity; Coin Standard as product identity; declaring one engine “forever” before bake-off |
 
 ---
 
@@ -63,7 +63,7 @@ Working shell in this repo (`npm start` → `env -u ELECTRON_RUN_AS_NODE electro
 - Multi-window: normal / private / Tor (SOCKS to external `tor` or Tor Browser)
 - Tabs, omnibox, bookmarks bar, history, settings
 - **Real shields:** EasyList-class engine (`@ghostery/adblocker`, uBO/Brave filter family) with a local cache + weekly refresh; compact host list + curated scareware/fake-AV host list as main-frame block + fallback; per-site shields popup panel
-- **Real Coin Standard Vault:** BIP84 (native segwit) hot wallet or watch-only xpub/zpub import; seed encrypted at rest (scrypt→AES-256-GCM, wrapped with OS keychain via `safeStorage`); balance/txs/receive+QR via mempool.space Esplora; on-chain send with fee estimate + coin selection; auto-lock; all amounts via `formatCoin`/`parseCoinInput`
+- **Bitcoin Vault:** BIP84 (native segwit) hot wallet or watch-only xpub/zpub import; seed encrypted at rest (scrypt→AES-256-GCM, wrapped with OS keychain via `safeStorage`); balance/txs/receive+QR via mempool.space Esplora; on-chain send with fee estimate + coin selection; auto-lock; amounts as sats/BTC via `formatCoin`/`parseCoinInput`
 - **Browser basics:** downloads manager (progress/cancel/open/reveal), find-in-page, zoom, built-in PDF viewer, external-protocol prompt, bookmark import (Chrome/Brave JSON + Netscape HTML)
 - **Packaged:** `npm run pack` → `dist/mac-arm64/Anon.app` (baked `icon.icns`, `computer.anon.browser`); `npm run dist` → `.dmg`. Dev Dock brand script still patches unpackaged runs
 - Sensitive IPC (vault/settings/history/downloads) gated to `file://` internal pages only
@@ -84,14 +84,14 @@ Use coding agents + frontier models to compress work that used to need specialis
 | Chromium / Brave rebase | Full-time browser eng | Agent-assisted patch porting, conflict resolution, GN flag audit when compiling out Rewards/Leo |
 | Extension / site compat | QA farm | Agent-driven Playwright suites; failure → minimal fix PRs |
 | Import (Chrome/Brave/Firefox) | Parsers + edge cases | Generate importers + golden fixtures from sample export blobs |
-| Vault UX + Coin Standard | Design + wallet eng | Strict schema from `vault/coins.js`; agent implements BIP21/LN UI without inventing denominations |
+| Vault UX | Design + wallet eng | Sats/BTC via `vault/coins.js`; BIP21/LN without inventing denominations |
 | Threat model / release notes | Docs burden | Keep `docs/03-threat-model.md` honest; agent updates when features land |
 | Packaging / CI | Release eng | electron-builder → later Chromium CI matrices authored by agent from templates |
 
 **Rules for agents building this:**
 
 1. Privacy defaults win over convenience features.
-2. Never invent a second money unit — only ¢ / ₿ via `vault/coins.js`.
+2. Money UI is sats / BTC only via `vault/coins.js` — no rewards tokens, no alternate units.
 3. Never put keys in renderer content or agent context.
 4. Prefer boring Chromium/Electron APIs over novel frameworks.
 5. Every wave ships something a user can click (signed build, shield win, or receive sats) — not only docs.
@@ -116,9 +116,9 @@ Goal: someone can download Anon and use it as a Bitcoin privacy browser preview.
    - [x] Per-site shields panel (BrowserWindow popup, not just a counter)
    - [ ] LLM-assisted rule suggestions → reviewed into repo lists (deferred to Wave 3 runtime assist)
 
-2. **Real Coin Standard Vault** ✅
+2. **Bitcoin Vault** ✅
    - [x] BIP84 seed wallet + import mnemonic/xpub/zpub (watch-only); receive address + BIP21 `bitcoin:` URI + QR
-   - [x] Display always via `formatCoin` / `parseCoinInput`
+   - [x] Display as sats / BTC via `formatCoin` / `parseCoinInput`
    - [x] "Hot wallet" labeling; passphrase (scrypt→AES-GCM) + OS keychain (`safeStorage`)
    - [x] Send path on-chain (mempool.space); Lightning later or via Coinclave handoff
 
@@ -134,7 +134,7 @@ Goal: someone can download Anon and use it as a Bitcoin privacy browser preview.
 5. **Tor** ✅
    - [x] Detect SOCKS; fail closed to Settings (with install hint), not a blank scare
 
-**Exit criteria Wave 1:** ✅ packaged build (notarize-ready pending certs); shields use real filter lists + block known scareware landers; Vault shows real receive address and on-chain balance in ¢/₿; README one-command run for testers.
+**Exit criteria Wave 1:** ✅ packaged build (notarize-ready pending certs); shields use real filter lists + block known scareware landers; Vault shows a real receive address and on-chain balance; README one-command run for testers.
 
 ### Wave 2 — Engine bake-off (portfolio, agent-driven)
 
@@ -190,7 +190,7 @@ Electron remains the **public product trunk** until a candidate beats it on the 
 ├─────────────────────────────────────────────────────────┤
 │  Content (untrusted)     │  Vault process (keys)        │
 │  web pages               │  passphrase / seed / xpub    │
-│  no key access           │  Coin Standard display       │
+│  no key access           │  sats / BTC display          │
 └─────────────────────────────────────────────────────────┘
          │                              │
          │                              ▼
@@ -214,7 +214,7 @@ Electron remains the **public product trunk** until a candidate beats it on the 
 | `src/wallet.js` | **Real BIP84 wallet** — seed/xpub, encryption, Esplora sync, send |
 | `src/downloads.js` | Download item tracking |
 | `src/bookmark-import.js` | Chrome/Brave JSON + Netscape HTML parser |
-| `vault/coins.js` | **Canonical Coin Standard** parse/format |
+| `vault/coins.js` | Sats / BTC parse + format |
 | `privacy/blocklist.js` | Compact host list + `BADWARE_HOSTS` scareware list |
 | `renderer/*` | Chrome + internal pages (vault, downloads, shields-panel, …) |
 | `brand/` | annona mark, `icon.png` / `icon.icns`, fonts |
@@ -231,7 +231,7 @@ A prospective user can:
 
 1. Install Anon without Node
 2. Browse with shields that block trackers and common scareware redirects
-3. Open Vault, see balance/receive in **¢ / ₿**, fund a real address
+3. Open Vault, see balance/receive in sats or BTC, fund a real address
 4. Open a Tor window when Tor is available
 5. Never see BAT, Rewards, or ad-network upsells
 6. Trust that agent features (if any) cannot spend without Vault policy

@@ -1,20 +1,26 @@
 # Anon Browser — product
 
-Privacy browser + Bitcoin Vault in Coin Standard (¢/₿). Free. No ad network. No attention token.
+Standalone privacy browser with a built-in Bitcoin Vault.
 
 LLMs/agents are build leverage for hard browser problems — not the category or pitch.
 
 ## Job to be done
 
-Install once → browse privately → hold/receive real bitcoin shown as ¢/₿ → never see BAT/Rewards upsells.
+Install once → browse privately → hold/receive bitcoin in the Vault.
 
 ## Engine stance
 
-- **Trunk (this repo):** Electron Wave 1 — justified public preview / product surface.
+- **Trunk (this repo):** Electron Wave 1 — public product preview.
 - **Next:** multi-engine bake-off. Chromium/Brave-core is a candidate, not destiny.
-- Product identity stays **private browse + Coin Standard**, independent of which engine wins.
+- Product identity stays **privacy browser + Bitcoin Vault**, independent of which engine wins.
+
+## Money
+
+On-chain sats. UI shows sats or BTC (`vault/coins.js`).
 
 ## Coinclave
+
+Related appliance stack — not required to understand or use Anon Browser.
 
 - Laptop: daily browser; in-browser Vault is hot/watch.
 - Appliance: same chrome/shields; Vault app holds keys; Hunter never holds keys.
@@ -22,6 +28,7 @@ Install once → browse privately → hold/receive real bitcoin shown as ¢/₿ 
 ## Non-goals
 
 - Camoufox / anti-detect product line
-- BAT / Rewards / ads business model
+- BAT / Rewards / ads as the product story
 - Agent-harness as the product identity
+- Coin Standard (or any denomination scheme) as the product identity
 - Marrying one engine before bake-off evidence

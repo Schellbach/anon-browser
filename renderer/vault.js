@@ -25,7 +25,7 @@
   function paintWallet(state) {
     show('panel-wallet');
     paintBadge(state);
-    $('balance').textContent = state.balance?.formatted || '¢ 0';
+    $('balance').textContent = state.balance?.formatted || '0 sats';
 
     const pending = $('pending-line');
     if (state.balance?.pendingFormatted) {

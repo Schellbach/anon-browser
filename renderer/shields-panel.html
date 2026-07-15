@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self';"
+    />
+    <title>Shields</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="panel">
+    <div class="panel-inner">
+      <p class="panel-host" id="host">—</p>
+      <p class="panel-big"><span id="blocked">0</span> blocked</p>
+
+      <div class="toggle">
+        <div class="toggle-label"><strong>Shields for this site</strong></div>
+        <button class="switch" id="switch-site" type="button"></button>
+      </div>
+      <div class="toggle">
+        <div class="toggle-label"><strong>Shields everywhere</strong></div>
+        <button class="switch" id="switch-global" type="button"></button>
+      </div>
+
+      <p class="muted" id="engine-line"></p>
+    </div>
+    <script src="shields-panel.js"></script>
+  </body>
+</html>

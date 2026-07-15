@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:;"
+    />
+    <title>History</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="page">
+    <div class="page-inner">
+      <div class="list-actions">
+        <h1 class="page-title">History</h1>
+        <button class="btn" id="btn-clear" type="button">Clear</button>
+      </div>
+      <div id="list"></div>
+      <p class="muted" id="empty" hidden>Empty</p>
+    </div>
+    <script src="history.js"></script>
+  </body>
+</html>

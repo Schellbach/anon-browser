@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:;"
+    />
+    <title>Settings</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="page">
+    <div class="page-inner">
+      <h1 class="page-title">Settings</h1>
+
+      <section class="section">
+        <h2>Privacy</h2>
+        <div class="toggle">
+          <div class="toggle-label">
+            <strong>Shields</strong>
+          </div>
+          <button class="switch on" id="switch-shields" type="button" aria-pressed="true"></button>
+        </div>
+        <div class="toggle">
+          <div class="toggle-label">
+            <strong>HTTPS upgrade</strong>
+          </div>
+          <button class="switch on" id="switch-https" type="button" aria-pressed="true"></button>
+        </div>
+        <div class="toggle">
+          <div class="toggle-label">
+            <strong>DNT / GPC</strong>
+          </div>
+          <button class="switch on" id="switch-fp" type="button" aria-pressed="true"></button>
+        </div>
+        <div class="toggle">
+          <div class="toggle-label">
+            <strong>Bookmarks bar</strong>
+          </div>
+          <button class="switch on" id="switch-bookmarks" type="button" aria-pressed="true"></button>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Tor</h2>
+        <div class="field">
+          <label for="tor-host">SOCKS host</label>
+          <input id="tor-host" type="text" spellcheck="false" />
+        </div>
+        <div class="field">
+          <label for="tor-port">SOCKS port</label>
+          <input id="tor-port" type="number" min="1" max="65535" />
+        </div>
+        <div class="row">
+          <button class="btn" id="btn-tor-save" type="button">Save</button>
+        </div>
+        <p class="muted" id="tor-status-line"></p>
+        <p class="muted" id="tor-hint" hidden>
+          Install: <span class="mono-inline">brew install tor && brew services start tor</span>
+          — or run Tor Browser and set port 9150.
+        </p>
+      </section>
+
+      <section class="section">
+        <h2>Vault</h2>
+        <div class="toggle">
+          <div class="toggle-label"><strong>Network</strong></div>
+          <select id="wallet-network" class="select">
+            <option value="mainnet">mainnet</option>
+            <option value="testnet">testnet</option>
+          </select>
+        </div>
+        <p class="muted">Applies to newly created or imported wallets.</p>
+      </section>
+
+      <section class="section">
+        <h2>Data</h2>
+        <button class="btn" id="btn-clear" type="button">Clear browsing data</button>
+        <p class="muted" id="clear-msg"></p>
+      </section>
+    </div>
+    <script src="settings.js"></script>
+  </body>
+</html>

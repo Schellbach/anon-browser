@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:;"
+    />
+    <title>Anon</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="chrome">
+      <div class="tab-strip" id="tabs"></div>
+      <div class="toolbar">
+        <button class="nav-btn" id="btn-back" title="Back" aria-label="Back">
+          <svg class="icon" viewBox="0 0 16 16"><path d="M10 3 5 8l5 5" /></svg>
+        </button>
+        <button class="nav-btn" id="btn-forward" title="Forward" aria-label="Forward">
+          <svg class="icon" viewBox="0 0 16 16"><path d="M6 3l5 5-5 5" /></svg>
+        </button>
+        <button class="nav-btn" id="btn-reload" title="Reload" aria-label="Reload">
+          <svg class="icon" viewBox="0 0 16 16">
+            <path d="M13 8a5 5 0 1 1-1.2-3.3" />
+            <path d="M13 3v3.5H9.5" />
+          </svg>
+        </button>
+        <form class="omnibox-wrap" id="omnibox-form">
+          <input
+            id="omnibox"
+            type="text"
+            spellcheck="false"
+            autocomplete="off"
+            placeholder="Search or enter address"
+          />
+          <button class="star-btn" id="btn-star" type="button" title="Bookmark">
+            <svg class="icon" viewBox="0 0 16 16">
+              <path
+                d="M8 2.2l1.5 3.1 3.4.5-2.45 2.4.6 3.4L8 10.1l-3.05 1.6.6-3.4L3.1 5.8l3.4-.5L8 2.2z"
+              />
+            </svg>
+          </button>
+        </form>
+        <button class="tool-btn" id="btn-vault" title="Vault" type="button" aria-label="Vault">
+          <svg class="icon" viewBox="0 0 16 16">
+            <rect x="3" y="7" width="10" height="7" rx="1.5" />
+            <path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" />
+            <circle cx="8" cy="10.5" r="1" fill="currentColor" stroke="none" />
+          </svg>
+        </button>
+        <button class="tool-btn" id="btn-agent" title="Agent" type="button" aria-label="Agent">
+          <svg class="icon" viewBox="0 0 16 16">
+            <circle cx="8" cy="8" r="5.5" />
+            <circle cx="8" cy="8" r="1.5" fill="currentColor" stroke="none" />
+            <path d="M8 2.5v1.5M8 12v1.5M2.5 8h1.5M12 8h1.5" />
+          </svg>
+        </button>
+        <button class="shields-btn" id="btn-shields" title="Shields" type="button">
+          <span id="shields-label">0</span>
+        </button>
+      </div>
+      <div class="bookmarks-bar" id="bookmarks-bar" hidden></div>
+      <div class="find-bar" id="find-bar" hidden>
+        <input id="find-input" type="text" placeholder="Find in page" spellcheck="false" />
+        <span class="find-count" id="find-count"></span>
+        <button class="nav-btn" id="find-prev" title="Previous" type="button">
+          <svg class="icon" viewBox="0 0 16 16"><path d="M4 10l4-4 4 4" /></svg>
+        </button>
+        <button class="nav-btn" id="find-next" title="Next" type="button">
+          <svg class="icon" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4" /></svg>
+        </button>
+        <button class="nav-btn" id="find-close" title="Close" type="button">×</button>
+      </div>
+    </div>
+    <script src="chrome.js"></script>
+  </body>
+</html>

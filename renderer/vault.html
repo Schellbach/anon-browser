@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:;"
+    />
+    <title>Vault</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="page">
+    <div class="page-inner">
+      <h1 class="page-title">Vault <span class="badge" id="badge" hidden></span></h1>
+
+      <!-- No wallet yet -->
+      <section class="section" id="panel-setup" hidden>
+        <div class="field">
+          <label for="setup-pass">Passphrase (min 8 characters)</label>
+          <input id="setup-pass" type="password" autocomplete="new-password" />
+        </div>
+        <div class="row">
+          <button class="btn primary" id="btn-create" type="button">Create wallet</button>
+          <button class="btn" id="btn-show-import" type="button">Import</button>
+        </div>
+        <div class="field" id="import-field" hidden>
+          <label for="import-secret">Recovery phrase or xpub/zpub (watch-only)</label>
+          <textarea id="import-secret" rows="3" spellcheck="false" autocomplete="off"></textarea>
+          <div class="row">
+            <button class="btn primary" id="btn-import" type="button">Import wallet</button>
+          </div>
+        </div>
+        <p class="error" id="setup-error"></p>
+        <p class="muted">
+          Hot wallet — keys live on this computer, protected by your passphrase.
+          For meaningful sums use a hardware wallet or import an xpub watch-only.
+        </p>
+      </section>
+
+      <!-- Backup mnemonic (shown exactly once after create) -->
+      <section class="section" id="panel-backup" hidden>
+        <p><strong>Write down your recovery phrase.</strong> It is shown only once.</p>
+        <p class="mono seed" id="mnemonic"></p>
+        <button class="btn primary" id="btn-backup-done" type="button">I wrote it down</button>
+      </section>
+
+      <!-- Locked -->
+      <section class="section" id="panel-lock" hidden>
+        <div class="field">
+          <label for="unlock-pass">Passphrase</label>
+          <input id="unlock-pass" type="password" autocomplete="current-password" />
+        </div>
+        <button class="btn primary" id="btn-unlock" type="button">Unlock</button>
+        <p class="error" id="unlock-error"></p>
+      </section>
+
+      <!-- Unlocked -->
+      <section class="section" id="panel-wallet" hidden>
+        <p class="balance" id="balance">¢ 0</p>
+        <p class="muted" id="pending-line" hidden></p>
+        <p class="muted" id="sync-line"></p>
+        <div class="row">
+          <button class="btn" id="btn-receive" type="button">Receive</button>
+          <button class="btn" id="btn-send-show" type="button">Send</button>
+          <button class="btn" id="btn-refresh" type="button">Refresh</button>
+          <button class="btn" id="btn-lock" type="button">Lock</button>
+        </div>
+      </section>
+
+      <section class="section" id="panel-receive" hidden>
+        <h2>Receive</h2>
+        <img id="qr" width="220" height="220" alt="" />
+        <p class="mono" id="receive-address"></p>
+        <div class="row">
+          <button class="btn" id="btn-copy-address" type="button">Copy address</button>
+          <button class="btn" id="btn-copy-uri" type="button">Copy URI</button>
+        </div>
+      </section>
+
+      <section class="section" id="panel-send" hidden>
+        <h2>Send</h2>
+        <div class="field">
+          <label for="send-to">To address</label>
+          <input id="send-to" type="text" spellcheck="false" autocomplete="off" />
+        </div>
+        <div class="field">
+          <label for="send-amount">Amount (¢ or ₿)</label>
+          <input id="send-amount" type="text" placeholder="¢ 5000" spellcheck="false" />
+        </div>
+        <p class="muted" id="fee-line"></p>
+        <div class="field">
+          <label for="send-pass">Passphrase</label>
+          <input id="send-pass" type="password" autocomplete="current-password" />
+        </div>
+        <div class="row">
+          <button class="btn" id="btn-estimate" type="button">Estimate fee</button>
+          <button class="btn primary" id="btn-send" type="button">Send</button>
+        </div>
+        <p class="error" id="send-error"></p>
+        <p class="mono" id="send-result" hidden></p>
+      </section>
+
+      <section class="section" id="panel-history" hidden>
+        <h2>Transactions</h2>
+        <ul class="history" id="history"></ul>
+      </section>
+    </div>
+    <script src="vault.js"></script>
+  </body>
+</html>

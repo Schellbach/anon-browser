@@ -1,0 +1,57 @@
+{
+  "name": "anon-browser",
+  "productName": "Anon",
+  "version": "0.3.0",
+  "description": "Anon Browser — Chromium privacy browser with Coin Standard Vault",
+  "main": "src/main.js",
+  "author": "Anon Computer, Inc.",
+  "license": "MIT",
+  "scripts": {
+    "brand": "node scripts/brand-electron-app.js",
+    "prestart": "node scripts/brand-electron-app.js",
+    "start": "env -u ELECTRON_RUN_AS_NODE electron .",
+    "dev": "env -u ELECTRON_RUN_AS_NODE electron . --dev",
+    "pack": "env -u ELECTRON_RUN_AS_NODE electron-builder --dir",
+    "dist": "env -u ELECTRON_RUN_AS_NODE electron-builder --mac dmg"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "build": {
+    "appId": "computer.anon.browser",
+    "productName": "Anon",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**",
+      "renderer/**",
+      "privacy/**",
+      "vault/**",
+      "brand/icon.png",
+      "brand/icon.icns",
+      "brand/fonts/**",
+      "package.json"
+    ],
+    "mac": {
+      "icon": "brand/icon.icns",
+      "category": "public.app-category.productivity",
+      "identity": null
+    },
+    "dmg": {
+      "title": "Anon"
+    }
+  },
+  "dependencies": {
+    "@ghostery/adblocker": "^2.18.1",
+    "@scure/base": "^2.0.0",
+    "@scure/bip32": "^2.2.0",
+    "@scure/bip39": "^2.2.0",
+    "@scure/btc-signer": "^2.2.0",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "electron": "^35.7.5",
+    "electron-builder": "^26.15.3"
+  }
+}

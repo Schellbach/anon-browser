@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:;"
+    />
+    <title>Agent</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="page">
+    <div class="page-inner">
+      <h1 class="page-title">Agent</h1>
+      <form class="agent-form" id="agent-form">
+        <textarea
+          id="prompt"
+          rows="4"
+          spellcheck="true"
+          placeholder="Ask the agent…"
+          autofocus
+        ></textarea>
+        <div class="row">
+          <button class="btn primary" id="btn-run" type="submit">Run</button>
+        </div>
+      </form>
+      <p class="muted" id="status">Not connected</p>
+      <pre class="mono agent-out" id="out" hidden></pre>
+    </div>
+    <script src="agent.js"></script>
+  </body>
+</html>

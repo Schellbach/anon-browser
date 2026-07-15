@@ -153,10 +153,11 @@ Electron remains the **public product** until a candidate beats it on the scorec
 | Hybrid | Borrow engine for hard pages; own chrome+Vault | Architecture too complex to ship |
 
 1. Define a small **compat corpus** (news, search, mempool, exchanges, docs) + Vault isolation checklist
-2. Stand up thin spikes (agent-built) for 2–3 candidates in parallel
-3. Weekly score: site pass rate · Vault boundary · CI green · human hours vs agent hours
-4. Optional Chromium/Brave-core spike only if bake-off shows embedded Chromium wins *and* rebase is affordable
-5. Do **not** freeze Electron until a successor ships an installable nightly with Vault entrypoint
+2. **Peerd-compatibility gate (see `docs/04-peerd-compatibility.md`):** a candidate must additionally implement `chrome.sidePanel` + `side_panel`, `chrome.action`, `chrome.commands`, `chrome.tabGroups`, `chrome.notifications` (all absent in Electron 35.7.5) on top of the isolation primitives Electron already has. Chromium-based candidates (CEF / Brave-core fork) are the most likely to pass.
+3. Stand up thin spikes (agent-built) for 2–3 candidates in parallel
+4. Weekly score: site pass rate · Vault boundary · Peerd API surface · CI green · human hours vs agent hours
+5. Optional Chromium/Brave-core spike only if bake-off shows embedded Chromium wins *and* rebase is affordable
+6. Do **not** freeze Electron until a successor ships an installable nightly with Vault entrypoint
 
 **Exit criteria Wave 2:** written bake-off report + chosen path (or “stay Electron”); if leaving Electron, installable nightly on the winner with Anon Vault entrypoint.
 
@@ -222,6 +223,7 @@ Electron remains the **public product** until a candidate beats it on the scorec
 | `docs/01-product.md` | Product brief |
 | `docs/02-llm-leverage.md` | How LLMs are used (not the pitch) |
 | `docs/03-threat-model.md` | Threat model (keep honest) |
+| `docs/04-peerd-compatibility.md` | Peerd investigation + decision + bake-off gate |
 
 ---
 

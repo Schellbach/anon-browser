@@ -34,6 +34,12 @@ Three trust classes with separate preloads:
 
 **Per-tab views**: Each tab owns its own BrowserView with the appropriate preload. Tab state (form input, scroll, navigation history) survives tab switches.
 
+### Peerd (AI agent harness) — not integrated
+
+- Peerd (v0.2.2.7, Apache-2.0) compatibility was investigated; see `docs/04-peerd-compatibility.md`.
+- Electron 35.7.5 can preserve Peerd's isolation model (MV3 service worker, keyless offscreen-worker heap, `scripting`, `tabs`, no-Node contexts), but **cannot run the unmodified store-safe artifact** because `chrome.sidePanel`/`action`/`commands`/`tabGroups`/`notifications` are unimplemented.
+- Per the no-shim / no-premature-fork rules, integration is **stopped** and deferred to the engine bake-off. Until then: Peerd never loads; web/extension pages already receive no `anonVault` (content preload is minimal); Vault IPC stays gated to trusted internal WebContents.
+
 ### Vault & wallet
 
 - Vault keys never in content process or agent context; seed decrypted only in the main process while unlocked, re-verified on each spend

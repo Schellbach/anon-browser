@@ -106,9 +106,16 @@ function normalizeXpub(input) {
 // ---------------------------------------------------------------------------
 // At-rest encryption
 
+/**
+ * Scrypt parameters (explicit):
+ * N=16384 (2^14), r=8, p=1
+ * ~100ms on modern hardware, memory cost ~16MB
+ */
+const SCRYPT_PARAMS = { N: 16384, r: 8, p: 1, maxmem: 32 * 1024 * 1024 };
+
 function encryptSecret(passphrase, secretObj) {
   const salt = crypto.randomBytes(16);
-  const key = crypto.scryptSync(passphrase, salt, 32);
+  const key = crypto.scryptSync(passphrase, salt, 32, SCRYPT_PARAMS);
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
   const data = Buffer.concat([
@@ -138,7 +145,7 @@ function decryptSecret(passphrase, enc) {
     }
     blob = JSON.parse(safeStorage.decryptString(Buffer.from(enc.data, 'base64')));
   }
-  const key = crypto.scryptSync(passphrase, Buffer.from(blob.salt, 'hex'), 32);
+  const key = crypto.scryptSync(passphrase, Buffer.from(blob.salt, 'hex'), 32, SCRYPT_PARAMS);
   const decipher = crypto.createDecipheriv(
     'aes-256-gcm',
     key,
@@ -176,7 +183,14 @@ function loadFile() {
 
 function saveFile(data) {
   fs.mkdirSync(path.dirname(vaultPath()), { recursive: true });
-  fs.writeFileSync(vaultPath(), JSON.stringify(data, null, 2));
+  const filePath = vaultPath();
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), { mode: 0o600 });
+  // Ensure restrictive permissions (user read/write only)
+  try {
+    fs.chmodSync(filePath, 0o600);
+  } catch (err) {
+    // Windows doesn't support chmod the same way; safeStorage provides OS-level protection there
+  }
 }
 
 class Wallet {

@@ -1,4 +1,4 @@
-/** Release hosting — update when assets land on GitHub Releases or a CDN. */
+/** Release hosting ⸻ update when assets land on GitHub Releases or a CDN. */
 export const RELEASES_URL = 'https://github.com/Schellbach/anon-browser/releases/latest'
 export const REPO_URL = 'https://github.com/Schellbach/anon-browser'
 export const VERSION = '0.3.0'

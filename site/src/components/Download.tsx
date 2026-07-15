@@ -14,10 +14,8 @@ export default function Download() {
   return (
     <section className="section download" id="download">
       <div className="section-inner download-inner">
-        <h2 className="section-title">Download Anon.</h2>
-        <p className="section-lede">
-          macOS Apple Silicon. Open source on GitHub.
-        </p>
+        <h2 className="section-title">Get Anon.</h2>
+        <p className="section-lede">Free for Mac. Open source.</p>
         <a href={primary.href} className="btn btn-primary btn-lg download-primary">
           Download for {primary.label}
         </a>
@@ -36,7 +34,7 @@ export default function Download() {
         )}
         <p className="download-source">
           <a href={REPO_URL} rel="noopener noreferrer">
-            Source on GitHub
+            View source
           </a>
         </p>
       </div>

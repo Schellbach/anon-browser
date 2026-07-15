@@ -3,10 +3,11 @@ export default function Shields() {
     <section className="section feature" id="shields">
       <div className="section-inner feature-inner">
         <div className="feature-copy">
-          <h2 className="section-title">Shields on by default.</h2>
+          <h2 className="section-title">Shields up.</h2>
           <p className="section-lede">
-            EasyList-class filtering, HTTPS upgrades, and a scareware blocklist
-            for fake antivirus landers. Per-site controls when you need them.
+            Ads and trackers are blocked before they load. Scareware pages too.
+            Connections upgrade to HTTPS. You can turn Shields off for a site ⸻
+            they’re on for everything else.
           </p>
         </div>
         <div className="feature-visual shields-visual">
@@ -21,12 +22,12 @@ export default function Shields() {
                 <span>Blocked</span>
               </li>
               <li>
-                <span>HTTPS upgrade</span>
-                <span>On</span>
+                <span>Scareware</span>
+                <span>Blocked</span>
               </li>
               <li>
-                <span>Scareware hosts</span>
-                <span>Blocked</span>
+                <span>HTTPS</span>
+                <span>On</span>
               </li>
             </ul>
           </div>

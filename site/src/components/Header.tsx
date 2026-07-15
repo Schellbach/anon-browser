@@ -3,7 +3,8 @@ import { primaryDownload } from '../lib/downloads'
 
 const links = [
   { href: '#shields', label: 'Shields' },
-  { href: '#vault', label: 'Bitcoin Vault' },
+  { href: '#vault', label: 'Bitcoin' },
+  { href: '#why', label: 'Vault & Agent' },
   { href: '#privacy', label: 'Privacy' },
 ]
 
@@ -13,7 +14,7 @@ export default function Header() {
   return (
     <header className="header">
       <div className="header-inner">
-        <Logo size={28} />
+        <Logo size={28} interactive />
         <nav className="header-nav" aria-label="Primary">
           {links.map((link) => (
             <a key={link.href} href={link.href} className="header-link">

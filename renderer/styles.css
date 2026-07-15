@@ -46,6 +46,13 @@
   box-sizing: border-box;
 }
 
+/* Author `display` (e.g. .find-bar/.bookmarks-bar use flex) would otherwise
+   override the UA [hidden] rule, so toggling the `hidden` attribute did
+   nothing. Make hidden authoritative. */
+[hidden] {
+  display: none !important;
+}
+
 html,
 body {
   margin: 0;

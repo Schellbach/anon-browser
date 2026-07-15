@@ -1,6 +1,6 @@
-# Anon Computer — Marketing Site
+# Anon Computer ⸻ Marketing Site
 
-Public site for **anoncomputer.com**: download Anon Browser. No Coinclave / silicon tease — the page is the product.
+Public site for **anoncomputer.com**: download Anon Browser. No Coinclave / silicon tease ⸻ the page is the product.
 
 ## Run
 
@@ -41,8 +41,8 @@ Update `src/lib/downloads.ts` when Windows/Linux builds ship, or when you host D
 
 ## Brand
 
-- **Mark:** Annona (sugar apple) silhouette — `public/anon-mark.png`
+- **Mark:** Annona (sugar apple) silhouette ⸻ `public/anon-mark.png`
 - **App icon:** `public/icon.png`
 - **Fonts:** Instrument Sans + IBM Plex Mono (`public/fonts/`)
-- **Accents:** copper `#C17F59`, seal green `#3D8B6E`
+- **Accents:** seal green `#2F6F58` / `#3D8B6E`
 - **Tone:** Ship the browser. No roadmap bait.

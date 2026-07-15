@@ -1,30 +1,43 @@
+const mechanics = [
+  {
+    title: 'Private windows',
+    body: 'When you want a clean slate. Nothing left behind when you close it.',
+  },
+  {
+    title: 'Tor windows',
+    body: 'When you need the Tor network. If Tor isn’t running, Anon won’t pretend ⸻ it stops.',
+  },
+  {
+    title: 'Sensors stay off',
+    body: 'Camera, microphone, and location ask first. They don’t get a free pass.',
+  },
+  {
+    title: 'Search is just Search',
+    body: 'No brand parade in the address bar. Private search on the open web. Onion search when you’re on Tor.',
+  },
+  {
+    title: 'We don’t track you',
+    body: 'No product analytics. Your browsing isn’t our business model.',
+  },
+]
+
 export default function Privacy() {
   return (
-    <section className="section feature" id="privacy">
-      <div className="section-inner feature-inner">
-        <div className="feature-copy">
-          <h2 className="section-title">Normal. Private. Tor.</h2>
-          <p className="section-lede">
-            Private windows leave no history. Tor windows use your local SOCKS
-            proxy and fail closed if Tor isn’t running.
-          </p>
-        </div>
-        <div className="feature-visual privacy-visual">
-          <div className="window-modes">
-            <div className="window-mode">
-              <span className="window-mode-label">Normal</span>
-              <span className="window-mode-desc">Daily browsing</span>
-            </div>
-            <div className="window-mode is-private">
-              <span className="window-mode-label">Private</span>
-              <span className="window-mode-desc">No history</span>
-            </div>
-            <div className="window-mode is-tor">
-              <span className="window-mode-label">Tor</span>
-              <span className="window-mode-desc">Fail closed</span>
-            </div>
-          </div>
-        </div>
+    <section className="section privacy" id="privacy">
+      <div className="section-inner">
+        <h2 className="section-title">Privacy that stays out of the way.</h2>
+        <p className="section-lede privacy-lede">
+          Anon is built so the page you’re on can’t reach into the rest of your
+          life. Here’s how that feels day to day.
+        </p>
+        <ol className="how-list">
+          {mechanics.map((item) => (
+            <li key={item.title} className="how-item">
+              <h3 className="how-title">{item.title}</h3>
+              <p className="how-body">{item.body}</p>
+            </li>
+          ))}
+        </ol>
       </div>
     </section>
   )

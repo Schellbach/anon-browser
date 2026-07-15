@@ -994,7 +994,7 @@ function registerIpc() {
   ipcMain.handle('vault:estimate', (e, { to, amount }) =>
     vaultCall(e, async () => {
       const coins = parseCoinInput(amount);
-      if (coins === null || coins <= 0n) throw new Error('Enter an amount in sats or BTC');
+      if (coins === null || coins <= 0n) throw new Error('Enter an amount as ¢ or ₿ (e.g. ¢ 5,000 or ₿ 0.01)');
       const est = await wallet.estimateSend(to, coins);
       return {
         fee: est.fee.toString(),
@@ -1008,7 +1008,7 @@ function registerIpc() {
   ipcMain.handle('vault:send', (e, { pass, to, amount }) =>
     vaultCall(e, async () => {
       const coins = parseCoinInput(amount);
-      if (coins === null || coins <= 0n) throw new Error('Enter an amount in sats or BTC');
+      if (coins === null || coins <= 0n) throw new Error('Enter an amount as ¢ or ₿ (e.g. ¢ 5,000 or ₿ 0.01)');
       const res = await wallet.send(pass, to, coins);
       return { txid: res.txid, state: wallet.getState() };
     })

@@ -4,8 +4,6 @@ Privacy browser with a built-in Bitcoin Vault.
 
 **This repo is the current Anon Browser app** — a real preview you can run and package. The next wave is an **engine bake-off** (Chromium is one candidate among several), not a forced Brave-core fork. See [`PLAN.md`](./PLAN.md).
 
-**Marketing site** (anoncomputer.com): [`site/`](./site/) — download-first public page. No Coinclave tease.
-
 ```bash
 npm install
 npm start

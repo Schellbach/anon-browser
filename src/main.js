@@ -39,6 +39,9 @@ const HOME_URL = 'anon://newtab';
 /** @type {Map<number, WindowState>} */
 const windows = new Map();
 
+/** @type {Set<number>} webContents IDs that are trusted internal pages */
+const internalWebContents = new Set();
+
 class WindowState {
   /**
    * @param {BrowserWindow} win
@@ -52,8 +55,7 @@ class WindowState {
     this.tabs = [];
     this.activeTabId = null;
     this.tabSeq = 0;
-    this.blockedThisLoad = 0;
-    this.contentView = null;
+    this.activeView = null;   // Currently visible tab's view
     this.chromeReady = false;
     this.findVisible = false;
   }
@@ -118,12 +120,35 @@ function shieldsForUrl(url) {
 }
 
 /**
- * Sensitive IPC (vault, settings, data) may only be called from our own
- * file:// pages — never from web content, which shares the preload bridge.
+ * Sensitive IPC (vault, settings, data) may only be called from trusted
+ * internal pages (chrome UI or anon:// internal pages), never from web content.
+ * 
+ * Security: Check against allowlist of known internal webContents IDs.
+ * This is stronger than URL-based checks which can be spoofed.
  */
 function isInternalSender(e) {
-  const url = e.senderFrame?.url || e.sender?.getURL?.() || '';
-  return url.startsWith('file://');
+  const id = e.sender?.id;
+  if (id == null) return false;
+  
+  // Chrome UI webContents (main window) are always internal
+  for (const st of windows.values()) {
+    if (st.win.webContents.id === id) return true;
+  }
+  
+  // Content view must be explicitly marked as internal
+  return internalWebContents.has(id);
+}
+
+/**
+ * Check if sender is chrome UI only (not content, even if internal content)
+ */
+function isChromeSender(e) {
+  const id = e.sender?.id;
+  if (id == null) return false;
+  for (const st of windows.values()) {
+    if (st.win.webContents.id === id) return true;
+  }
+  return false;
 }
 
 function stateForEvent(event) {
@@ -134,15 +159,21 @@ function stateForEvent(event) {
 
 function stateFromContents(webContents) {
   for (const st of windows.values()) {
-    if (st.contentView && st.contentView.webContents.id === webContents.id) return st;
+    // Check chrome UI
     if (st.win.webContents.id === webContents.id) return st;
+    // Check all tab views
+    for (const tab of st.tabs) {
+      if (tab.view && tab.view.webContents.id === webContents.id) return st;
+    }
   }
   return null;
 }
 
 function stateFromWebContentsId(id) {
   for (const st of windows.values()) {
-    if (st.contentView && st.contentView.webContents.id === id) return st;
+    for (const tab of st.tabs) {
+      if (tab.view && tab.view.webContents.id === id) return st;
+    }
   }
   return null;
 }
@@ -165,7 +196,7 @@ function tabSnapshot(st) {
     })),
     activeTabId: st.activeTabId,
     shieldsOn: tab ? shieldsForUrl(tab.url) : !!store.settings.globalShields,
-    blockedCount: st.blockedThisLoad,
+    blockedCount: tab ? tab.blockedCount : 0,
     globalShields: !!store.settings.globalShields,
     httpsUpgrade: !!store.settings.httpsUpgrade,
     fingerprintResist: !!store.settings.fingerprintResist,
@@ -190,8 +221,8 @@ function sendChrome(st, channel, payload) {
 }
 
 function sendContent(st, channel, payload) {
-  if (st.contentView && !st.contentView.webContents.isDestroyed()) {
-    st.contentView.webContents.send(channel, payload);
+  if (st.activeView && !st.activeView.webContents.isDestroyed()) {
+    st.activeView.webContents.send(channel, payload);
   }
 }
 
@@ -210,10 +241,10 @@ function broadcastDownloads() {
 }
 
 function layoutContent(st) {
-  if (!st.win || !st.contentView) return;
+  if (!st.win || !st.activeView) return;
   const [w, h] = st.win.getContentSize();
   const top = st.chromeHeight();
-  st.contentView.setBounds({
+  st.activeView.setBounds({
     x: 0,
     y: top,
     width: w,
@@ -233,10 +264,48 @@ function normalizeUrl(url, { tor = false } = {}) {
   return `https://${url}`;
 }
 
+/**
+ * Load content into a specific tab's view
+ */
+function loadTabContent(st, tab) {
+  const view = tab.view;
+  if (!view) return;
+  
+  tab.blockedCount = 0;
+  const target = tab.url;
+
+  if (isAnonUrl(target)) {
+    view.webContents.loadFile(resolveAnonUrl(target));
+    tab.title = anonTitle(target);
+  } else if (st.isTor && !(torStatus && torStatus.ok)) {
+    // Tor window but Tor is down - show settings
+    tab.url = 'anon://settings';
+    tab.title = 'Settings';
+    view.webContents.loadFile(resolveAnonUrl('anon://settings'));
+  } else {
+    view.webContents.loadURL(target);
+  }
+  broadcast(st);
+}
+
+/**
+ * Switch window to show a specific tab's view
+ */
+function switchToTabView(st, tab) {
+  if (!tab.view) return;
+  st.activeView = tab.view;
+  st.win.setBrowserView(tab.view);
+  layoutContent(st);
+  broadcast(st);
+}
+
+/**
+ * Navigate the active tab to a URL
+ */
 function loadInContent(st, url) {
-  if (!st.contentView) return;
-  st.blockedThisLoad = 0;
   const tab = activeTab(st);
+  if (!tab) return;
+  
   let target = normalizeUrl(url, { tor: st.isTor });
 
   // .onion outside Tor window → open Tor window instead
@@ -245,40 +314,75 @@ function loadInContent(st, url) {
     return;
   }
 
-  if (tab) tab.url = target;
-
-  if (isAnonUrl(target)) {
-    st.contentView.webContents.loadFile(resolveAnonUrl(target));
-    if (tab) tab.title = anonTitle(target);
-  } else if (st.isTor && !(torStatus && torStatus.ok)) {
-    if (tab) {
-      tab.url = 'anon://settings';
-      tab.title = 'Settings';
-    }
-    st.contentView.webContents.loadFile(resolveAnonUrl('anon://settings'));
-  } else {
-    st.contentView.webContents.loadURL(target);
-  }
-  broadcast(st);
+  tab.url = target;
+  tab.blockedCount = 0;
+  loadTabContent(st, tab);
 }
 
 function createTab(st, url = HOME_URL) {
   const id = `t${++st.tabSeq}`;
+  const normalizedUrl = normalizeUrl(url, { tor: st.isTor });
+  const isInternal = isAnonUrl(normalizedUrl);
+  
+  // Create appropriate view for this tab
+  const ses = sessionFor(st.mode);
+  const view = new BrowserView({
+    webPreferences: {
+      preload: path.join(__dirname, isInternal ? 'preload-internal.js' : 'preload-content.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      plugins: true,
+      session: ses,
+    },
+  });
+  
+  // Track internal views
+  if (isInternal) {
+    internalWebContents.add(view.webContents.id);
+  }
+  
   const tab = {
     id,
-    url,
-    title: isAnonUrl(url) ? anonTitle(url) : 'New Tab',
+    url: normalizedUrl,
+    title: isAnonUrl(normalizedUrl) ? anonTitle(normalizedUrl) : 'New Tab',
+    view,
+    isInternal,
+    blockedCount: 0,
   };
+  
   st.tabs.push(tab);
   st.activeTabId = id;
-  loadInContent(st, url);
+  
+  // Attach listeners to this tab's view
+  attachContentListeners(st, view, tab);
+  
+  // Load content in the new view
+  loadTabContent(st, tab);
+  
+  // Switch to this tab's view
+  switchToTabView(st, tab);
+  
   return tab;
 }
 
 function closeTab(st, id) {
   const idx = st.tabs.findIndex((t) => t.id === id);
   if (idx < 0) return;
+  
+  const tab = st.tabs[idx];
+  
+  // Clean up the tab's view
+  if (tab.view) {
+    if (tab.isInternal) {
+      internalWebContents.delete(tab.view.webContents.id);
+    }
+    // Note: BrowserView cleanup happens automatically when window closes
+    // or when we set a different view
+  }
+  
   st.tabs.splice(idx, 1);
+  
   if (st.tabs.length === 0) {
     if (st.mode !== 'normal') {
       st.win.close();
@@ -287,19 +391,21 @@ function closeTab(st, id) {
     createTab(st, HOME_URL);
     return;
   }
+  
   if (st.activeTabId === id) {
     const next = st.tabs[Math.max(0, idx - 1)];
     st.activeTabId = next.id;
-    loadInContent(st, next.url);
+    switchToTabView(st, next);
+  } else {
+    broadcast(st);
   }
-  broadcast(st);
 }
 
 function switchTab(st, id) {
   const tab = st.tabs.find((t) => t.id === id);
   if (!tab) return;
   st.activeTabId = id;
-  loadInContent(st, tab.url);
+  switchToTabView(st, tab);
 }
 
 const WEB_PROTOCOLS = /^(https?|file|about|blob|data|chrome|devtools):/i;
@@ -320,8 +426,8 @@ function promptExternalProtocol(st, url) {
     });
 }
 
-function attachContentListeners(st) {
-  const wc = st.contentView.webContents;
+function attachContentListeners(st, view, tab) {
+  const wc = view.webContents;
   wc.setWindowOpenHandler(({ url }) => {
     if (!WEB_PROTOCOLS.test(url) && !isAnonUrl(url)) {
       promptExternalProtocol(st, url);
@@ -337,14 +443,12 @@ function attachContentListeners(st) {
     }
   });
   wc.on('page-title-updated', (_e, title) => {
-    const tab = activeTab(st);
     if (!tab) return;
     if (isAnonUrl(tab.url)) tab.title = anonTitle(tab.url);
     else tab.title = title || tab.url;
     broadcast(st);
   });
   wc.on('did-navigate', (_e, url) => {
-    const tab = activeTab(st);
     if (!tab) return;
     if (isAnonUrl(tab.url) && url.startsWith('file:')) {
       broadcast(st);
@@ -357,7 +461,6 @@ function attachContentListeners(st) {
     }
   });
   wc.on('did-navigate-in-page', (_e, url) => {
-    const tab = activeTab(st);
     if (!tab || isAnonUrl(tab.url)) return;
     if (!url.startsWith('file:')) {
       tab.url = url;
@@ -366,7 +469,6 @@ function attachContentListeners(st) {
   });
   wc.on('did-fail-load', (_e, errorCode, errorDescription, validatedURL, isMainFrame) => {
     if (!isMainFrame || errorCode === -3) return; // -3 = aborted
-    const tab = activeTab(st);
     if (st.isTor && tab && !isAnonUrl(tab.url)) {
       // Likely Tor down mid-session
       refreshTorStatus().then(() => {
@@ -377,7 +479,7 @@ function attachContentListeners(st) {
     }
   });
   wc.on('did-start-loading', () => {
-    st.blockedThisLoad = 0;
+    if (tab) tab.blockedCount = 0;
     sendChrome(st, 'chrome:loading', { loading: true });
   });
   wc.on('did-stop-loading', () => {
@@ -415,15 +517,21 @@ function setupSessionPrivacy(ses, mode = 'normal') {
         details.webContentsId != null
           ? stateFromWebContentsId(details.webContentsId)
           : null;
-      const tab = st ? activeTab(st) : null;
+      
+      // Find the tab that owns this webContents
+      let tab = null;
+      if (st && details.webContentsId != null) {
+        tab = st.tabs.find(t => t.view?.webContents.id === details.webContentsId);
+      }
+      
       const pageUrl = tab ? tab.url : '';
       return {
         pageUrl,
         shieldsOn: pageUrl ? shieldsForUrl(pageUrl) : !!store.settings.globalShields,
         onBlocked: () => {
-          if (!st) return;
-          st.blockedThisLoad += 1;
-          sendChrome(st, 'chrome:blocked', { count: st.blockedThisLoad });
+          if (!tab) return;
+          tab.blockedCount += 1;
+          sendChrome(st, 'chrome:blocked', { count: tab.blockedCount });
         },
       };
     },
@@ -480,29 +588,20 @@ async function createBrowserWindow(mode = 'normal', startUrl = null) {
     await applyTorProxy(ses, { host: torStatus.host, port: torStatus.port });
   }
 
-  const partition =
-    mode === 'tor' ? 'persist:anon-tor' : mode === 'private' ? 'anon-private' : undefined;
-
-  st.contentView = new BrowserView({
-    webPreferences: {
-      preload: path.join(__dirname, 'preload-content.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-      plugins: true, // built-in PDF viewer
-      session: ses,
-      partition,
-    },
-  });
-  win.setBrowserView(st.contentView);
-  layoutContent(st);
-  attachContentListeners(st);
+  // Views are now created per-tab in createTab()
 
   win.loadFile(path.join(__dirname, '../renderer/chrome.html'));
   win.on('resize', () => layoutContent(st));
   win.on('closed', () => {
     windows.delete(win.id);
-    st.contentView = null;
+    // Clean up all tab views
+    for (const tab of st.tabs) {
+      if (tab.view && tab.isInternal) {
+        internalWebContents.delete(tab.view.webContents.id);
+      }
+    }
+    st.tabs = [];
+    st.activeView = null;
   });
 
   win.webContents.on('did-finish-load', () => {
@@ -602,66 +701,88 @@ function shieldsPanelInfo() {
 // ---------------------------------------------------------------------------
 
 function registerIpc() {
+  // Navigation - chrome UI only
   ipcMain.handle('nav:goto', (e, url) => {
+    if (!isChromeSender(e)) return;
     const st = stateForEvent(e);
     if (st) loadInContent(st, String(url || HOME_URL));
   });
   ipcMain.handle('nav:back', (e) => {
+    if (!isChromeSender(e)) return;
     const st = stateForEvent(e) || stateFromContents(e.sender);
-    if (st?.contentView?.webContents.navigationHistory.canGoBack())
-      st.contentView.webContents.navigationHistory.goBack();
+    if (st?.activeView?.webContents.navigationHistory.canGoBack())
+      st.activeView.webContents.navigationHistory.goBack();
   });
   ipcMain.handle('nav:forward', (e) => {
+    if (!isChromeSender(e)) return;
     const st = stateForEvent(e);
-    if (st?.contentView?.webContents.navigationHistory.canGoForward())
-      st.contentView.webContents.navigationHistory.goForward();
+    if (st?.activeView?.webContents.navigationHistory.canGoForward())
+      st.activeView.webContents.navigationHistory.goForward();
   });
   ipcMain.handle('nav:reload', (e) => {
+    if (!isChromeSender(e)) return;
     const st = stateForEvent(e);
-    st?.contentView?.webContents.reload();
+    st?.activeView?.webContents.reload();
   });
   ipcMain.handle('nav:home', (e) => {
+    if (!isChromeSender(e)) return;
     const st = stateForEvent(e);
     if (st) loadInContent(st, HOME_URL);
   });
 
+  // Tabs - chrome UI only (tabs:state exposes URLs + vault balance!)
   ipcMain.handle('tabs:create', (e, url) => {
+    if (!isChromeSender(e)) return;
     const st = stateForEvent(e);
     if (st) createTab(st, url || HOME_URL);
   });
   ipcMain.handle('tabs:close', (e, id) => {
+    if (!isChromeSender(e)) return;
     const st = stateForEvent(e);
     if (st) closeTab(st, id);
   });
   ipcMain.handle('tabs:switch', (e, id) => {
+    if (!isChromeSender(e)) return;
     const st = stateForEvent(e);
     if (st) switchTab(st, id);
   });
   ipcMain.handle('tabs:state', (e) => {
+    if (!isChromeSender(e)) return null;
     const st = stateForEvent(e);
     return st ? tabSnapshot(st) : null;
   });
 
-  ipcMain.handle('window:new', async () => {
+  // Window management - chrome UI only  
+  ipcMain.handle('window:new', async (e) => {
+    if (!isChromeSender(e)) return;
     await createBrowserWindow('normal');
   });
-  ipcMain.handle('window:newPrivate', async () => {
+  ipcMain.handle('window:newPrivate', async (e) => {
+    if (!isChromeSender(e)) return;
     await createBrowserWindow('private');
   });
-  ipcMain.handle('window:newTor', async () => {
+  ipcMain.handle('window:newTor', async (e) => {
+    if (!isChromeSender(e)) return;
     await createBrowserWindow('tor');
   });
 
-  ipcMain.handle('tor:status', async () => refreshTorStatus());
-  ipcMain.handle('tor:get', () => ({
-    ...(torStatus || {
-      ok: false,
-      host: store.settings.torSocksHost,
-      port: store.settings.torSocksPort,
-    }),
-    settingsHost: store.settings.torSocksHost,
-    settingsPort: store.settings.torSocksPort,
-  }));
+  // Tor status - internal pages only
+  ipcMain.handle('tor:status', async (e) => {
+    if (!isInternalSender(e)) return null;
+    return refreshTorStatus();
+  });
+  ipcMain.handle('tor:get', (e) => {
+    if (!isInternalSender(e)) return null;
+    return {
+      ...(torStatus || {
+        ok: false,
+        host: store.settings.torSocksHost,
+        port: store.settings.torSocksPort,
+      }),
+      settingsHost: store.settings.torSocksHost,
+      settingsPort: store.settings.torSocksPort,
+    };
+  });
   ipcMain.handle('tor:setSocks', async (e, { host, port }) => {
     if (!isInternalSender(e)) return null;
     if (host) store.settings.torSocksHost = String(host);
@@ -688,7 +809,7 @@ function registerIpc() {
     const tab = activeTab(st);
     if (!tab || isAnonUrl(tab.url)) return null;
     siteShields.set(hostKey(tab.url), !!on);
-    st.contentView?.webContents.reload();
+    st.activeView?.webContents.reload();
     broadcast(st);
     return shieldsPanelInfo();
   });
@@ -715,11 +836,11 @@ function registerIpc() {
     if (!st) return;
     st.findVisible = !!visible;
     layoutContent(st);
-    if (!visible) st.contentView?.webContents.stopFindInPage('clearSelection');
+    if (!visible) st.activeView?.webContents.stopFindInPage('clearSelection');
   });
   ipcMain.handle('find:query', (e, { text, forward = true, findNext = false }) => {
     const st = stateForEvent(e);
-    const wc = st?.contentView?.webContents;
+    const wc = st?.activeView?.webContents;
     if (!wc) return;
     if (!text) {
       wc.stopFindInPage('clearSelection');
@@ -731,7 +852,10 @@ function registerIpc() {
 
   // -- settings / data ------------------------------------------------------
 
-  ipcMain.handle('settings:get', () => ({ ...store.settings }));
+  ipcMain.handle('settings:get', (e) => {
+    if (!isInternalSender(e)) return {};
+    return { ...store.settings };
+  });
   ipcMain.handle('settings:set', (e, patch) => {
     if (!isInternalSender(e)) return { ...store.settings };
     Object.assign(store.settings, patch || {});
@@ -745,7 +869,10 @@ function registerIpc() {
     return { ...store.settings };
   });
 
-  ipcMain.handle('bookmarks:list', () => store.bookmarks.items);
+  ipcMain.handle('bookmarks:list', (e) => {
+    if (!isInternalSender(e)) return [];
+    return store.bookmarks.items;
+  });
   ipcMain.handle('bookmarks:toggle', (e) => {
     if (!isInternalSender(e)) return store.bookmarks.items;
     const st = stateForEvent(e);
@@ -900,7 +1027,7 @@ function registerIpc() {
 }
 
 function zoomContent(delta) {
-  const wc = focusedState()?.contentView?.webContents;
+  const wc = focusedState()?.activeView?.webContents;
   if (!wc) return;
   wc.setZoomLevel(delta === 0 ? 0 : wc.getZoomLevel() + delta);
 }
@@ -1055,7 +1182,7 @@ function buildMenu() {
         {
           label: 'Reload',
           accelerator: 'CmdOrCtrl+R',
-          click: () => focusedState()?.contentView?.webContents.reload(),
+          click: () => focusedState()?.activeView?.webContents.reload(),
         },
         {
           label: 'Bookmark This Page',

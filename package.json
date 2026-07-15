@@ -12,7 +12,8 @@
     "start": "env -u ELECTRON_RUN_AS_NODE electron .",
     "dev": "env -u ELECTRON_RUN_AS_NODE electron . --dev",
     "pack": "env -u ELECTRON_RUN_AS_NODE electron-builder --dir",
-    "dist": "env -u ELECTRON_RUN_AS_NODE electron-builder --mac dmg"
+    "dist": "env -u ELECTRON_RUN_AS_NODE electron-builder --mac dmg",
+    "test": "node --test test/*.test.js"
   },
   "engines": {
     "node": ">=20"

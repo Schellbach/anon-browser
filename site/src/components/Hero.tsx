@@ -19,7 +19,7 @@ export default function Hero() {
         <p className="hero-brand-name">Anon</p>
         <h1 className="hero-title">The privacy browser.</h1>
         <p className="hero-lede">
-          Shields, Tor, and a Bitcoin Vault.
+          Private by default. Bitcoin built in.
         </p>
         <div className="hero-actions">
           <a href={download.href} className="btn btn-primary btn-lg">

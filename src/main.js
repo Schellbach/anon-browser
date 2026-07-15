@@ -1251,7 +1251,7 @@ function buildMenu() {
 }
 
 app.whenReady().then(async () => {
-  app.setName('Anon');
+  app.setName('Anon Browser');
   if (process.platform === 'darwin' && app.dock) {
     const icon = nativeImage.createFromPath(APP_ICON);
     if (!icon.isEmpty()) app.dock.setIcon(icon);

@@ -5,7 +5,7 @@ export default function Footer() {
   return (
     <footer className="footer">
       <div className="footer-inner">
-        <Logo size={24} />
+        <Logo size={24} interactive />
         <div className="footer-meta">
           <p>Anon Computer, Inc.</p>
           <p className="footer-muted">Privacy browser · Bitcoin Vault</p>

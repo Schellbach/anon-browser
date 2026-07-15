@@ -1,6 +1,17 @@
 /**
  * Compact tracker / ad host blocklist for Shields.
- * Not a full EasyList — enough for a strong default MVP.
+ * 
+ * SCOPE: Focused on known tracker subdomains and ad networks. Not a full 
+ * EasyList replacement. The Ghostery engine is the primary filter; this list 
+ * is a fallback and supplement.
+ * 
+ * FIRST-PARTY SITES: Does not block visiting legitimate sites (e.g., we block 
+ * connect.facebook.net trackers but not facebook.com itself). Users can still
+ * visit social media, comment platforms, etc. Blocks are scoped to tracking/ad
+ * endpoints.
+ * 
+ * NO CLAIM OF BRAVE-GRADE COVERAGE: This is an MVP list for reasonable defaults,
+ * not exhaustive protection. For stronger blocking, rely on the Ghostery engine.
  */
 
 const BLOCKED_HOSTS = new Set([
@@ -11,7 +22,6 @@ const BLOCKED_HOSTS = new Set([
   'googletagmanager.com',
   'googletagservices.com',
   'facebook.net',
-  'facebook.com',
   'connect.facebook.net',
   'scorecardresearch.com',
   'adservice.google.com',
@@ -57,10 +67,8 @@ const BLOCKED_HOSTS = new Set([
   'px.ads.linkedin.com',
   'tr.snapchat.com',
   'sc-static.net',
-  'tiktok.com',
   'analytics.tiktok.com',
   'ads.tiktok.com',
-  'pinterest.com',
   'ct.pinterest.com',
   'ads.pinterest.com',
   // Extra common trackers / ad tech
@@ -112,9 +120,7 @@ const BLOCKED_HOSTS = new Set([
   'addthis.com',
   'addtoany.com',
   'sharethis.com',
-  'disqus.com',
   'disquscdn.com',
-  'gravatar.com',
   'outbrainimg.com',
   'taboola.com',
   'trc.taboola.com',
@@ -134,7 +140,6 @@ const BLOCKED_HOSTS = new Set([
   'adservice.google.co.uk',
   'adservice.google.ca',
   'adservice.google.de',
-  'facebook.com',
   'fbcdn.net',
   'fbsbx.com',
 ]);

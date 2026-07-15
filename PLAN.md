@@ -15,7 +15,7 @@ Users should get:
 
 - A real app they can install and try (Wave 1 Electron)
 - Shields that stop trackers / scareware redirects
-- A real Bitcoin Vault (receive / send / watch-only) — amounts in sats or BTC
+- A real Bitcoin Vault (receive / send / watch-only) — amounts in Coin Standard (¢ / ₿)
 - Anon brand (annona mark)
 
 **Not** an “AI browser.” **Not** a Coin Standard marketing vehicle. LLMs/agents are **build leverage**. The product is: **private browser + Bitcoin Vault**.
@@ -30,7 +30,7 @@ Users should get:
 |---|---|
 | Category | Standalone privacy browser with Bitcoin Vault (Origin-*shaped* UX, not Brave-locked) |
 | Business model | Free to use; no BAT / Rewards / attention token (internal constraint, not the pitch) |
-| Money UX | Integer sats on-chain; UI shows sats or BTC via `vault/coins.js` |
+| Money UX | Integer coins on-chain; UI uses Coin Standard (¢ / ₿) via `vault/coins.js` |
 | Brand | Anon / annona mark; copper `#C17F59`, seal green `#3D8B6E` — use sparingly; chrome stays utilitarian |
 | Engine path | **Current:** Electron Wave 1 (this repo). **Next:** multi-engine bake-off. Chromium/Brave-core is *a candidate*, not the only exit. |
 | Bake-off candidates | Electron deepen · CEF/embedded Chromium · system WebView · Gecko fork · Ladybird · Servo experiments · hybrid (hard pages on borrow-engine, Anon chrome + Vault owned) |
@@ -63,7 +63,7 @@ Working shell in this repo (`npm start` → `env -u ELECTRON_RUN_AS_NODE electro
 - Multi-window: normal / private / Tor (SOCKS to external `tor` or Tor Browser)
 - Tabs, omnibox, bookmarks bar, history, settings
 - **Real shields:** EasyList-class engine (`@ghostery/adblocker`, uBO/Brave filter family) with a local cache + weekly refresh; compact host list + curated scareware/fake-AV host list as main-frame block + fallback; per-site shields popup panel
-- **Bitcoin Vault:** BIP84 (native segwit) hot wallet or watch-only xpub/zpub import; seed encrypted at rest (scrypt→AES-256-GCM, wrapped with OS keychain via `safeStorage`); balance/txs/receive+QR via mempool.space Esplora; on-chain send with fee estimate + coin selection; auto-lock; amounts as sats/BTC via `formatCoin`/`parseCoinInput`
+- **Bitcoin Vault:** BIP84 (native segwit) hot wallet or watch-only xpub/zpub import; seed encrypted at rest (scrypt→AES-256-GCM, wrapped with OS keychain via `safeStorage`); balance/txs/receive+QR via mempool.space Esplora; on-chain send with fee estimate + coin selection; auto-lock; amounts as ¢ / ₿ via `formatCoin`/`parseCoinInput`
 - **Browser basics:** downloads manager (progress/cancel/open/reveal), find-in-page, zoom, built-in PDF viewer, external-protocol prompt, bookmark import (Chrome/Brave JSON + Netscape HTML)
 - **Packaged:** `npm run pack` → `dist/mac-arm64/Anon.app` (baked `icon.icns`, `computer.anon.browser`); `npm run dist` → `.dmg`. Dev Dock brand script still patches unpackaged runs
 - Sensitive IPC (vault/settings/history/downloads) gated to `file://` internal pages only
@@ -84,17 +84,17 @@ Use coding agents + frontier models to compress work that used to need specialis
 | Chromium / Brave rebase | Full-time browser eng | Agent-assisted patch porting, conflict resolution, GN flag audit when compiling out Rewards/Leo |
 | Extension / site compat | QA farm | Agent-driven Playwright suites; failure → minimal fix PRs |
 | Import (Chrome/Brave/Firefox) | Parsers + edge cases | Generate importers + golden fixtures from sample export blobs |
-| Vault UX | Design + wallet eng | Sats/BTC via `vault/coins.js`; BIP21/LN without inventing denominations |
+| Vault UX | Design + wallet eng | Coin Standard (¢ / ₿) via `vault/coins.js`; BIP21 wire amounts unchanged |
 | Threat model / release notes | Docs burden | Keep `docs/03-threat-model.md` honest; agent updates when features land |
 | Packaging / CI | Release eng | electron-builder → later Chromium CI matrices authored by agent from templates |
 
 **Rules for agents building this:**
 
 1. Privacy defaults win over convenience features.
-2. Money UI is sats / BTC only via `vault/coins.js` — no rewards tokens, no alternate units.
+2. Money UI is Coin Standard (¢ / ₿) via `vault/coins.js` — no rewards tokens, no alternate units.
 3. Never put keys in renderer content or agent context.
 4. Prefer boring Chromium/Electron APIs over novel frameworks.
-5. Every wave ships something a user can click (signed build, shield win, or receive sats) — not only docs.
+5. Every wave ships something a user can click (signed build, shield win, or receive coins) — not only docs.
 6. When using LLMs at **runtime**, fail closed; user can disable; no cloud exfil of page content by default.
 
 ---
@@ -118,7 +118,7 @@ Goal: someone can download Anon and use it as a Bitcoin privacy browser preview.
 
 2. **Bitcoin Vault** ✅
    - [x] BIP84 seed wallet + import mnemonic/xpub/zpub (watch-only); receive address + BIP21 `bitcoin:` URI + QR
-   - [x] Display as sats / BTC via `formatCoin` / `parseCoinInput`
+   - [x] Display as Coin Standard (¢ / ₿) via `formatCoin` / `parseCoinInput`
    - [x] "Hot wallet" labeling; passphrase (scrypt→AES-GCM) + OS keychain (`safeStorage`)
    - [x] Send path on-chain (mempool.space); Lightning later or via Coinclave handoff
 
@@ -190,7 +190,7 @@ Electron remains the **public product** until a candidate beats it on the scorec
 ├─────────────────────────────────────────────────────────┤
 │  Content (untrusted)     │  Vault process (keys)        │
 │  web pages               │  passphrase / seed / xpub    │
-│  no key access           │  sats / BTC display          │
+│  no key access           │  ¢ / ₿ display               │
 └─────────────────────────────────────────────────────────┘
          │                              │
          │                              ▼
@@ -214,7 +214,7 @@ Electron remains the **public product** until a candidate beats it on the scorec
 | `src/wallet.js` | **Real BIP84 wallet** — seed/xpub, encryption, Esplora sync, send |
 | `src/downloads.js` | Download item tracking |
 | `src/bookmark-import.js` | Chrome/Brave JSON + Netscape HTML parser |
-| `vault/coins.js` | Sats / BTC parse + format |
+| `vault/coins.js` | Coin Standard (¢ / ₿) parse + format |
 | `privacy/blocklist.js` | Compact host list + `BADWARE_HOSTS` scareware list |
 | `renderer/*` | Chrome + internal pages (vault, downloads, shields-panel, …) |
 | `brand/` | annona mark, `icon.png` / `icon.icns`, fonts |
@@ -231,7 +231,7 @@ A prospective user can:
 
 1. Install Anon without Node
 2. Browse with shields that block trackers and common scareware redirects
-3. Open Vault, see balance/receive in sats or BTC, fund a real address
+3. Open Vault, see balance/receive in ¢ or ₿, fund a real address
 4. Open a Tor window when Tor is available
 5. Never see BAT, Rewards, or ad-network upsells
 6. Trust that agent features (if any) cannot spend without Vault policy

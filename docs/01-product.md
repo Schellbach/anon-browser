@@ -16,7 +16,7 @@ Install once → browse privately → hold/receive bitcoin in the Vault.
 
 ## Money
 
-On-chain sats. UI shows sats or BTC (`vault/coins.js`).
+On-chain integer coins (1 coin = 1 satoshi). UI uses Coin Standard: `¢` for coins, `₿` for bitcoin (`vault/coins.js`).
 
 ## Coinclave
 

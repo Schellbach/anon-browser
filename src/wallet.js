@@ -7,7 +7,7 @@
  * - Chain data (balance, txs, utxos) lives in memory only while unlocked;
  *   nothing about funds is persisted in plaintext.
  * - Chain source: mempool.space Esplora REST API (mainnet or testnet).
- * - Amounts are integer sats, shown as sats or BTC.
+ * - Amounts are integer coins on-chain; UI uses Coin Standard (¢ / ₿).
  */
 const fs = require('fs');
 const path = require('path');
@@ -567,7 +567,7 @@ class Wallet {
 
     const to = String(toAddress).trim();
     libs.btc.Address(this.btcNetwork()).decode(to);
-    if (amountCoins < DUST) throw new Error(`Minimum send is ${DUST} sats`);
+    if (amountCoins < DUST) throw new Error(`Minimum send is ${formatCoin(DUST)}`);
 
     const rate = feeRate || this.mem.feeRates?.halfHourFee || 4;
     const { picked, fee, change } = this.selectInputs(amountCoins, rate);

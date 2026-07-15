@@ -25,7 +25,7 @@
   function paintWallet(state) {
     show('panel-wallet');
     paintBadge(state);
-    $('balance').textContent = state.balance?.formatted || '0 sats';
+    $('balance').textContent = state.balance?.formatted || '¢ 0';
 
     const pending = $('pending-line');
     if (state.balance?.pendingFormatted) {
@@ -161,7 +161,7 @@
       return;
     }
     $('fee-line').textContent =
-      `Fee ${res.feeFormatted} (${res.rate} sat/vB) · total ${res.totalFormatted}`;
+      `Fee ${res.feeFormatted} (${res.rate} ¢/vB) · total ${res.totalFormatted}`;
   });
 
   $('btn-send').addEventListener('click', async () => {

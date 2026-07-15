@@ -40,7 +40,7 @@ Three trust classes with separate preloads:
 - Seed encrypted at rest: **scrypt** (N=16384, r=8, p=1, ~100ms, ~16MB memory) → AES-256-GCM, additionally wrapped with the OS keychain via Electron `safeStorage` when available
 - Vault file (`vault.json`) has restrictive permissions (mode 0600, user read/write only) on Unix-like systems
 - Auto-lock after 15 minutes of inactivity
-- Bitcoin amount parsing uses bigint-only arithmetic; no IEEE floats (rejects over-precision >8 decimals for BTC)
+- Bitcoin amount parsing uses bigint-only arithmetic; no IEEE floats (rejects over-precision >8 decimals for ₿)
 
 ### Privacy
 

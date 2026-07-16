@@ -1252,6 +1252,7 @@ function buildMenu() {
 
 app.whenReady().then(async () => {
   app.setName('Anon Browser');
+  // Pre-masked squircle PNG (transparent corners) via dock.setIcon.
   if (process.platform === 'darwin' && app.dock) {
     const icon = nativeImage.createFromPath(APP_ICON);
     if (!icon.isEmpty()) app.dock.setIcon(icon);

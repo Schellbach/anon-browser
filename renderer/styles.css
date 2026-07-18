@@ -36,6 +36,7 @@
   --mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
   --chrome-h: 72px;
   --bookmarks-h: 28px;
+  --find-h: 34px;
   --traffic: 76px;
   --r: 6px;
 }
@@ -101,6 +102,14 @@ input {
 
 #chrome.with-bookmarks {
   height: calc(var(--chrome-h) + var(--bookmarks-h));
+}
+
+#chrome.with-find {
+  height: calc(var(--chrome-h) + var(--find-h));
+}
+
+#chrome.with-bookmarks.with-find {
+  height: calc(var(--chrome-h) + var(--bookmarks-h) + var(--find-h));
 }
 
 #chrome.is-private,

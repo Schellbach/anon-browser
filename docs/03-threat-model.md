@@ -27,12 +27,12 @@ Three trust classes with separate preloads:
    - **Minimal/empty preload**: No `anonVault`, `anonNav`, or `anonDownloads` exposed
    - Cannot read settings, bookmarks, tab state (which includes URLs + vault balance), or Tor status
    - Cannot invoke navigation, window, or vault APIs
-   - Separate BrowserView per tab; each web tab gets content preload
+   - Separate `WebContentsView` per tab; each web tab gets content preload
    - Internal tabs get internal preload
 
 **Deny-by-default IPC**: Handlers reject calls from non-allowlisted senders. Even if a malicious page guesses an IPC channel name, the main process refuses it.
 
-**Per-tab views**: Each tab owns its own BrowserView with the appropriate preload. Tab state (form input, scroll, navigation history) survives tab switches.
+**Per-tab views**: Each tab owns its own `WebContentsView` with the appropriate preload. Tab state (form input, scroll, navigation history) survives tab switches. Navigating across the internal/web trust boundary destroys the old web contents and creates a new view with the other preload; privileged bridges therefore cannot survive into a website.
 
 ### Vault & wallet
 
@@ -48,8 +48,9 @@ Three trust classes with separate preloads:
 - Compact blocklist: focuses on tracker subdomains and ad networks; does **not** block first-party social media sites (you can visit facebook.com, tiktok.com, etc.)
 - Scareware/fake-AV hosts blocked even as main-frame loads
 - Tor windows use SOCKS proxy (if available); clearnet windows do not
-- Session isolation: normal / private / Tor modes use separate Electron sessions (cookies, storage, cache isolated)
-- Fingerprint resistance (optional): strips client hints, sends DNT and GPC headers
+- Session isolation: normal / private / Tor modes use separate Electron sessions (cookies, storage, cache isolated); private and Tor partitions are memory-only
+- Runtime identity: the reduced user agent reports the actual Chromium major without Electron's product/version token
+- Fingerprint resistance (optional): strips all `Sec-CH-UA*` request headers and sends DNT and GPC
 - HTTPS upgrade (optional): auto-upgrades http:// → https:// for main frames (skips .onion and localhost)
 - Optional LLM page-risk assist (future): local/user-gated; fail closed; no cloud exfil by default
 
@@ -67,12 +68,13 @@ Three trust classes with separate preloads:
 
 ## Known limits (Electron v0.3+)
 
+- **Runtime cadence**: Electron is pinned to 43.1.1 (Chromium 150). Weekly dependency checks surface new releases, but updates still require the runtime smoke suite and a packaged build before merging.
 - **Hot wallet = same risk class as any in-browser wallet**; for meaningful sums use hardware or watch-only xpub import
 - **Wallet chain privacy**: mempool.space sees your addresses and balance (clearnet); Tor routing is Wave 2+
 - **On-chain only** (no Lightning yet); no coin-control / labeling
-- **No code signing / notarization / updater** yet (needs certs)
+- **Current builds are unsigned and unnotarized**: Hardened Runtime, entitlements, and the release workflow are configured, but Anon Computer still needs Apple Developer enrollment and credentials. There is no updater yet.
 - **Blocklist coverage**: Compact list is fallback; Ghostery engine is primary. Not Brave-grade; MVP-level. Focus is on known trackers and scareware, not exhaustive ad blocking.
-- **Electron/Chromium fingerprinting**: Not Brave-grade yet; basic resistance (client hint stripping, DNT/GPC)
+- **Electron/Chromium fingerprinting**: Not Brave-grade. UA normalization removes a trivial Electron token, but JavaScript, graphics, codecs, behavior, and other surfaces can still identify or correlate the runtime.
 
 ## Coinclave
 

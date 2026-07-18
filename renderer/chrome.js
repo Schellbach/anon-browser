@@ -142,12 +142,14 @@
   // Find in page
   function showFind() {
     findBar.hidden = false;
+    chromeRoot.classList.add('with-find');
     window.anon.findVisible(true);
     findInput.focus();
     findInput.select();
   }
   function hideFind() {
     findBar.hidden = true;
+    chromeRoot.classList.remove('with-find');
     findCount.textContent = '';
     window.anon.findVisible(false);
   }

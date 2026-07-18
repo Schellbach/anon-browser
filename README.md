@@ -46,3 +46,12 @@ Settings → Vault switches new wallets between `mainnet` and `testnet` (uses me
 - Not notarized for Gatekeeper-friendly stranger installs
 
 **Next:** Wave 2 engine bake-off in `PLAN.md` — score Electron deepen / CEF / WebView / Gecko / Ladybird / hybrid with agents; pick by evidence.
+
+## License
+
+Anon Browser's source code is available under the [MIT License](./LICENSE).
+Third-party components remain subject to their respective licenses.
+
+The Anon names, wordmarks, annona mark, application icons, and related branding
+are not licensed for confusing or endorsement-implying use. See
+[TRADEMARKS.md](./TRADEMARKS.md).

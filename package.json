@@ -32,6 +32,8 @@
       "brand/icon.png",
       "brand/icon.icns",
       "brand/fonts/**",
+      "LICENSE",
+      "TRADEMARKS.md",
       "package.json"
     ],
     "mac": {

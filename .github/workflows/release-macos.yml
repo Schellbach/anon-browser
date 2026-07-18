@@ -1,0 +1,114 @@
+name: Signed macOS release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Sign and notarize Apple Silicon build
+    runs-on: macos-14
+    environment: release
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify release credentials
+        env:
+          MACOS_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          APPLE_API_KEY_P8_BASE64: ${{ secrets.APPLE_API_KEY_P8_BASE64 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+        run: |
+          missing=0
+          for name in \
+            MACOS_CERTIFICATE_P12_BASE64 \
+            MACOS_CERTIFICATE_PASSWORD \
+            APPLE_API_KEY_P8_BASE64 \
+            APPLE_API_KEY_ID \
+            APPLE_API_ISSUER
+          do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing GitHub release secret: ${name}"
+              missing=1
+            fi
+          done
+          exit "${missing}"
+
+      - name: Prepare App Store Connect API key
+        env:
+          APPLE_API_KEY_P8_BASE64: ${{ secrets.APPLE_API_KEY_P8_BASE64 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+        run: |
+          key_path="${RUNNER_TEMP}/AuthKey_${APPLE_API_KEY_ID}.p8"
+          printf '%s' "${APPLE_API_KEY_P8_BASE64}" | base64 -D > "${key_path}"
+          chmod 600 "${key_path}"
+          echo "APPLE_API_KEY=${key_path}" >> "${GITHUB_ENV}"
+
+      - name: Test
+        run: npm test
+
+      - name: Build, sign, and notarize
+        env:
+          CSC_LINK: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+          CSC_KEY_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+        run: npm run dist -- --arm64
+
+      - name: Verify signature and notarization ticket
+        run: |
+          app_path="dist/mac-arm64/Anon.app"
+          codesign --verify --deep --strict --verbose=2 "${app_path}"
+          codesign --display --verbose=4 "${app_path}"
+          xcrun stapler validate "${app_path}"
+          spctl --assess --type execute --verbose=4 "${app_path}"
+
+      - name: Create release checksum
+        run: |
+          cd dist
+          shasum -a 256 ./*.dmg > SHA256SUMS
+
+      - name: Upload signed DMG
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: Anon-macOS-Apple-Silicon
+          path: |
+            dist/*.dmg
+            dist/SHA256SUMS
+          if-no-files-found: error
+
+      - name: Publish tagged GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            gh release upload "${GITHUB_REF_NAME}" dist/*.dmg dist/SHA256SUMS --clobber
+          else
+            gh release create "${GITHUB_REF_NAME}" dist/*.dmg dist/SHA256SUMS \
+              --verify-tag \
+              --generate-notes \
+              --title "Anon ${GITHUB_REF_NAME}"
+          fi
+
+      - name: Remove temporary API key
+        if: always()
+        run: rm -f "${APPLE_API_KEY:-}"

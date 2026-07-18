@@ -13,11 +13,18 @@ const electronAppOrig = path.join(electronDir, 'Electron.app');
 const electronApp = path.join(electronDir, 'Anon Browser.app');
 const icnsSrc = path.join(root, 'brand', 'icon.icns');
 const pathTxt = path.join(root, 'node_modules', 'electron', 'path.txt');
+const installScript = path.join(root, 'node_modules', 'electron', 'install.js');
 
 const APP_NAME = 'Anon Browser';
 const EXEC_NAME = 'Anon Browser';
 
 if (process.platform !== 'darwin') process.exit(0);
+
+// Electron 42+ downloads its binary on first launch instead of during npm
+// install. Ensure a clean checkout has a bundle available before branding it.
+if (!fs.existsSync(electronAppOrig) && !fs.existsSync(electronApp)) {
+  execFileSync(process.execPath, [installScript], { stdio: 'inherit' });
+}
 
 // Rename the bundle directory Electron.app -> "Anon Browser.app". macOS caches
 // icons/names per bundle PATH; keeping the name "Electron.app" leaves a stale
@@ -73,4 +80,12 @@ fs.chmodSync(execDst, 0o755);
 fs.writeFileSync(pathTxt, `Anon Browser.app/Contents/MacOS/${EXEC_NAME}`);
 
 fs.copyFileSync(icnsSrc, icnsDst);
+// Electron's downloaded macOS bundle is signed. Mutating its plist/executable
+// invalidates that signature, and newer Electron/macOS combinations are killed
+// at launch unless the development bundle is signed again.
+execFileSync(
+  '/usr/bin/codesign',
+  ['--force', '--deep', '--sign', '-', electronApp],
+  { stdio: 'ignore' }
+);
 console.log(`Branded Electron.app → ${APP_NAME}`);

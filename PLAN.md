@@ -58,18 +58,19 @@ Browser content process must never see seed material. Agent plane (if any) is ke
 
 ## 4. What exists today (v0.3 Electron — Wave 1 done)
 
-Working shell in this repo (`npm start` → `env -u ELECTRON_RUN_AS_NODE electron .`):
+Working shell in this repo (`npm start` → pinned Electron 43.1.1 / Chromium 150):
 
 - Multi-window: normal / private / Tor (SOCKS to external `tor` or Tor Browser)
 - Tabs, omnibox, bookmarks bar, history, settings
 - **Real shields:** EasyList-class engine (`@ghostery/adblocker`, uBO/Brave filter family) with a local cache + weekly refresh; compact host list + curated scareware/fake-AV host list as main-frame block + fallback; per-site shields popup panel
 - **Bitcoin Vault:** BIP84 (native segwit) hot wallet or watch-only xpub/zpub import; seed encrypted at rest (scrypt→AES-256-GCM, wrapped with OS keychain via `safeStorage`); balance/txs/receive+QR via mempool.space Esplora; on-chain send with fee estimate + coin selection; auto-lock; amounts as ¢ / ₿ via `formatCoin`/`parseCoinInput`
 - **Browser basics:** downloads manager (progress/cancel/open/reveal), find-in-page, zoom, built-in PDF viewer, external-protocol prompt, bookmark import (Chrome/Brave JSON + Netscape HTML)
-- **Packaged:** `npm run pack` → `dist/mac-arm64/Anon.app` (baked `icon.icns`, `computer.anon.browser`); `npm run dist` → `.dmg`. Dev Dock brand script still patches unpackaged runs
-- Sensitive IPC (vault/settings/history/downloads) gated to `file://` internal pages only
+- **Packaged:** `npm run pack` → `dist/mac-arm64/Anon.app` (baked `icon.icns`, `computer.anon.browser`); `npm run dist` → arm64 `.dmg`. Dev Dock brand script still patches unpackaged runs
+- Tabs use `WebContentsView`; privileged internal and empty web preloads are separated by destroying/recreating the view at every trust-boundary navigation
+- Sensitive IPC (vault/settings/history/downloads) gated to allowlisted `file://` internal pages only
 - Toolbar: Vault + Agent (stub) + Shields panel
 
-**Known gaps (for Wave 2+):** Electron ceiling vs real Chromium; macOS signing/notarization uses ad-hoc identity (`identity: null`) until certs exist; Lightning not wired (on-chain only); send is main-process hot-key signing (fine for hot wallet, appliance routes to Vault app).
+**Known gaps (for Wave 2+):** Electron ceiling vs real Chromium; macOS release config and CI are notarization-ready, but Anon Computer still needs Apple Developer enrollment and credentials; Lightning not wired (on-chain only); send is main-process hot-key signing (fine for hot wallet, appliance routes to Vault app).
 
 ---
 
@@ -96,6 +97,7 @@ Use coding agents + frontier models to compress work that used to need specialis
 4. Prefer boring Chromium/Electron APIs over novel frameworks.
 5. Every wave ships something a user can click (signed build, shield win, or receive coins) — not only docs.
 6. When using LLMs at **runtime**, fail closed; user can disable; no cloud exfil of page content by default.
+7. Keep Electron pinned exactly; merge runtime updates only after unit, Electron smoke, app, and DMG checks pass.
 
 ---
 
@@ -105,7 +107,7 @@ Use coding agents + frontier models to compress work that used to need specialis
 
 - [x] Document run/packaging in README; keep `ELECTRON_RUN_AS_NODE` unset in scripts
 - [x] Expand scareware/redirect hosts from real incidents into `privacy/blocklist.js` (`BADWARE_HOSTS`)
-- [x] Smoke checklist: newtab, shields toggle, private, Tor, Vault create/unlock, Agent stub
+- [x] Automated Electron smoke: tabs, trust-boundary preload isolation, normal/private/Tor sessions, Vault create/lock/unlock/receive, downloads, and runtime UA
 
 ### Wave 1 — Viable Electron product ✅ done
 
@@ -124,7 +126,9 @@ Goal: someone can download Anon and use it as a Bitcoin privacy browser preview.
 
 3. **Installable app** ✅
    - [x] electron-builder: macOS `.app`/`.dmg`, `productName: Anon`, baked `brand/icon.icns`
-   - [ ] Signing/notarization + auto-update (needs Apple certs — `identity` currently null)
+   - [x] Hardened Runtime entitlements + GitHub signing/notarization workflow
+   - [ ] Apple Developer enrollment, release secrets, and first accepted notarized DMG
+   - [ ] Auto-update
    - [x] Dock plist hack now dev-only; packaged bundle is self-branded
 
 4. **Browser basics** ✅
@@ -199,7 +203,7 @@ Electron remains the **public product** until a candidate beats it on the scorec
     clearnet / .onion
 ```
 
-**This app** implements that in Electron (BrowserView + main-process vault).  
+**This app** implements that in Electron (`WebContentsView` + main-process vault).
 **Bake-off winners** must map the same boundaries onto whatever engine is chosen (content untrusted; Vault privileged; no keys in agent context).
 
 ---

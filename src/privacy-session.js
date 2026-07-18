@@ -2,8 +2,10 @@ const { session } = require('electron');
 const { shouldBlockUrl, isBadwareUrl } = require('../privacy/blocklist');
 const { engineMatch } = require('./filter-engine');
 const { isOnionUrl } = require('./tor');
+const { buildChromiumUserAgent } = require('./user-agent');
 
 const wired = new WeakSet();
+const CHROMIUM_USER_AGENT = buildChromiumUserAgent();
 
 /**
  * Attach shields + HTTPS upgrade + privacy headers to a session (once).
@@ -17,6 +19,7 @@ const wired = new WeakSet();
 function attachPrivacyToSession(ses, opts) {
   if (wired.has(ses)) return;
   wired.add(ses);
+  ses.setUserAgent(CHROMIUM_USER_AGENT);
 
   ses.webRequest.onBeforeRequest({ urls: ['*://*/*'] }, (details, callback) => {
     const { shieldsOn, onBlocked } = opts.resolve(details);
@@ -61,10 +64,9 @@ function attachPrivacyToSession(ses, opts) {
   ses.webRequest.onBeforeSendHeaders({ urls: ['*://*/*'] }, (details, callback) => {
     const headers = { ...details.requestHeaders };
     if (ses.anonFingerprintResist) {
-      delete headers['Sec-CH-UA'];
-      delete headers['Sec-CH-UA-Mobile'];
-      delete headers['Sec-CH-UA-Platform'];
-      delete headers['Sec-CH-UA-Full-Version-List'];
+      for (const name of Object.keys(headers)) {
+        if (name.toLowerCase().startsWith('sec-ch-ua')) delete headers[name];
+      }
       headers.DNT = '1';
       headers['Sec-GPC'] = '1';
     }
@@ -90,7 +92,7 @@ function attachPrivacyToSession(ses, opts) {
  */
 function sessionFor(mode) {
   if (mode === 'tor') {
-    return session.fromPartition('persist:anon-tor', { cache: false });
+    return session.fromPartition('anon-tor', { cache: false });
   }
   if (mode === 'private') {
     return session.fromPartition('anon-private', { cache: false });

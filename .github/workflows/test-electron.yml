@@ -1,0 +1,45 @@
+name: Electron runtime
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: electron-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: macos-14
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test unit and Electron boundaries
+        run: npm test
+
+      - name: Package application
+        run: npm run pack -- --arm64
+
+      - name: Verify packaged Electron version
+        run: |
+          expected="$(node -p "require('./package.json').devDependencies.electron")"
+          actual="$(plutil -extract CFBundleVersion raw \
+            "dist/mac-arm64/Anon.app/Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/Info.plist")"
+          test "${actual}" = "${expected}"

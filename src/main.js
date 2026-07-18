@@ -1,23 +1,61 @@
 const {
   app,
+  BaseWindow,
   BrowserWindow,
-  BrowserView,
+  WebContentsView,
   ipcMain,
   shell,
   Menu,
   dialog,
   nativeImage,
+  nativeTheme,
 } = require('electron');
+const fs = require('fs');
 const path = require('path');
+const { fileURLToPath } = require('url');
 const { Wallet } = require('./wallet');
 const { AppStore } = require('./store');
 const { attachPrivacyToSession, sessionFor, applyTorProxy } = require('./privacy-session');
-const { initFilterEngine, engineStatus } = require('./filter-engine');
+const { initFilterEngine, engineStatus, cosmeticStylesForUrl } = require('./filter-engine');
+const { siteCosmeticCss, siteCosmeticScript } = require('./cosmetics');
 const { attachDownloads, listLive, cancelDownload } = require('./downloads');
 const { parseBookmarksFile } = require('./bookmark-import');
 const { detectTor, isOnionUrl, normalizeOnionInput } = require('./tor');
 const { searchUrl } = require('./search');
 const { parseCoinInput, formatCoin } = require('../vault/coins');
+const { buildChromiumUserAgent } = require('./user-agent');
+
+const IS_SMOKE_TEST =
+  process.env.ANON_ELECTRON_SMOKE === '1' && process.argv.includes('--smoke-test');
+const SMOKE_ROOT = process.env.ANON_SMOKE_ROOT;
+if (IS_SMOKE_TEST) {
+  if (!SMOKE_ROOT) throw new Error('ANON_SMOKE_ROOT is required for smoke tests');
+  const userData = path.join(SMOKE_ROOT, 'user-data');
+  const downloads = path.join(SMOKE_ROOT, 'downloads');
+  fs.mkdirSync(userData, { recursive: true });
+  fs.mkdirSync(downloads, { recursive: true });
+  app.setPath('userData', userData);
+  app.setPath('downloads', downloads);
+}
+
+// Electron's default user agent exposes the shell and exact Electron version.
+// Use Chromium's reduced UA shape while retaining the actual Chromium major.
+app.userAgentFallback = buildChromiumUserAgent();
+
+// Dark app chrome must not force-darken web pages (black bg + black text).
+app.commandLine.appendSwitch(
+  'disable-features',
+  [
+    'WebContentsForceDark',
+    'WebContentsForceDarkInvertVisuals',
+    'CSSColorSchemeUARendering',
+    'AutoDarkModeForWebContents',
+  ].join(',')
+);
+
+// Pages should see prefers-color-scheme: light even when macOS is in dark mode.
+// Our chrome UI is custom CSS (stays dark); this only affects website media queries.
+nativeTheme.themeSource = 'light';
 
 const APP_ICON = path.join(__dirname, '../brand/icon.png');
 
@@ -35,6 +73,15 @@ const TOOLBAR_HEIGHT = 72;
 const BOOKMARKS_HEIGHT = 28;
 const FIND_HEIGHT = 34;
 const HOME_URL = 'anon://newtab';
+const INTERNAL_TAB_FILES = new Set([
+  'newtab.html',
+  'vault.html',
+  'agent.html',
+  'settings.html',
+  'history.html',
+  'bookmarks.html',
+  'downloads.html',
+]);
 
 /** @type {Map<number, WindowState>} */
 const windows = new Map();
@@ -44,7 +91,7 @@ const internalWebContents = new Set();
 
 class WindowState {
   /**
-   * @param {BrowserWindow} win
+   * @param {Electron.BaseWindow} win
    * @param {'normal' | 'private' | 'tor'} mode
    */
   constructor(win, mode = 'normal') {
@@ -56,8 +103,14 @@ class WindowState {
     this.activeTabId = null;
     this.tabSeq = 0;
     this.activeView = null;   // Currently visible tab's view
+    /** @type {Electron.WebContentsView | null} */
+    this.chromeView = null;   // Toolbar / omnibox (sibling of tab views)
     this.chromeReady = false;
     this.findVisible = false;
+  }
+
+  chromeWebContents() {
+    return this.chromeView?.webContents || null;
   }
 
   chromeHeight() {
@@ -87,6 +140,27 @@ function resolveAnonUrl(url) {
   };
   const file = map[url] || 'newtab.html';
   return path.join(__dirname, '../renderer', file);
+}
+
+function isTrustedInternalFileUrl(url) {
+  try {
+    const filePath = fileURLToPath(url);
+    const rendererDir = path.resolve(__dirname, '../renderer');
+    return (
+      path.dirname(path.resolve(filePath)) === rendererDir &&
+      INTERNAL_TAB_FILES.has(path.basename(filePath))
+    );
+  } catch {
+    return false;
+  }
+}
+
+function isTrustedChromeFileUrl(url) {
+  try {
+    return path.resolve(fileURLToPath(url)) === path.resolve(__dirname, '../renderer/chrome.html');
+  } catch {
+    return false;
+  }
 }
 
 function anonTitle(url) {
@@ -129,14 +203,16 @@ function shieldsForUrl(url) {
 function isInternalSender(e) {
   const id = e.sender?.id;
   if (id == null) return false;
+  const senderUrl = e.senderFrame?.url || e.sender.getURL();
   
-  // Chrome UI webContents (main window) are always internal
+  // Chrome UI webContents are always internal
   for (const st of windows.values()) {
-    if (st.win.webContents.id === id) return true;
+    const chrome = st.chromeWebContents();
+    if (chrome && chrome.id === id) return isTrustedChromeFileUrl(senderUrl);
   }
-  
+
   // Content view must be explicitly marked as internal
-  return internalWebContents.has(id);
+  return internalWebContents.has(id) && isTrustedInternalFileUrl(senderUrl);
 }
 
 /**
@@ -145,23 +221,22 @@ function isInternalSender(e) {
 function isChromeSender(e) {
   const id = e.sender?.id;
   if (id == null) return false;
+  const senderUrl = e.senderFrame?.url || e.sender.getURL();
   for (const st of windows.values()) {
-    if (st.win.webContents.id === id) return true;
+    const chrome = st.chromeWebContents();
+    if (chrome && chrome.id === id) return isTrustedChromeFileUrl(senderUrl);
   }
   return false;
 }
 
 function stateForEvent(event) {
-  const win = BrowserWindow.fromWebContents(event.sender);
-  if (win && windows.has(win.id)) return windows.get(win.id);
   return stateFromContents(event.sender);
 }
 
 function stateFromContents(webContents) {
   for (const st of windows.values()) {
-    // Check chrome UI
-    if (st.win.webContents.id === webContents.id) return st;
-    // Check all tab views
+    const chrome = st.chromeWebContents();
+    if (chrome && chrome.id === webContents.id) return st;
     for (const tab of st.tabs) {
       if (tab.view && tab.view.webContents.id === webContents.id) return st;
     }
@@ -215,8 +290,9 @@ function tabSnapshot(st) {
 }
 
 function sendChrome(st, channel, payload) {
-  if (st.win && !st.win.isDestroyed()) {
-    st.win.webContents.send(channel, payload);
+  const chrome = st.chromeWebContents();
+  if (chrome && !chrome.isDestroyed()) {
+    chrome.send(channel, payload);
   }
 }
 
@@ -241,15 +317,71 @@ function broadcastDownloads() {
 }
 
 function layoutContent(st) {
-  if (!st.win || !st.activeView) return;
+  if (!st.win || st.win.isDestroyed()) return;
   const [w, h] = st.win.getContentSize();
   const top = st.chromeHeight();
-  st.activeView.setBounds({
-    x: 0,
-    y: top,
-    width: w,
-    height: Math.max(0, h - top),
+  // Electron 43: BrowserWindow.webContents paints over contentView children.
+  // Chrome and tabs must both be WebContentsViews under BaseWindow.contentView.
+  if (st.chromeView) {
+    st.chromeView.setBounds({ x: 0, y: 0, width: w, height: top });
+  }
+  if (st.activeView) {
+    st.activeView.setBounds({
+      x: 0,
+      y: top,
+      width: w,
+      height: Math.max(0, h - top),
+    });
+  }
+}
+
+function destroyTabView(st, tab) {
+  const view = tab?.view;
+  if (!view) return;
+  const contents = view.webContents;
+  internalWebContents.delete(contents.id);
+  if (st.activeView === view) st.activeView = null;
+  if (!st.win.isDestroyed()) st.win.contentView.removeChildView(view);
+  if (!contents.isDestroyed()) contents.close({ waitForBeforeUnload: false });
+  tab.view = null;
+}
+
+function createTabView(st, tab, isInternal) {
+  const view = new WebContentsView({
+    webPreferences: {
+      preload: path.join(__dirname, isInternal ? 'preload-internal.js' : 'preload-content.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      plugins: true,
+      session: sessionFor(st.mode),
+      disableBlinkFeatures: isInternal ? undefined : 'CSSColorSchemeUARendering',
+    },
   });
+  view.setVisible(false);
+  if (!isInternal) {
+    view.setBackgroundColor('#ffffff');
+  }
+  st.win.contentView.addChildView(view);
+
+  tab.view = view;
+  tab.isInternal = isInternal;
+  if (isInternal) internalWebContents.add(view.webContents.id);
+  attachContentListeners(st, view, tab);
+  return view;
+}
+
+/**
+ * Internal pages have privileged preload APIs; web pages have an empty preload.
+ * Replace the entire WebContentsView whenever a tab crosses that trust boundary.
+ */
+function ensureTabView(st, tab, isInternal) {
+  if (tab.view && tab.isInternal === isInternal) return tab.view;
+  const wasActive = st.activeTabId === tab.id;
+  destroyTabView(st, tab);
+  const view = createTabView(st, tab, isInternal);
+  if (wasActive) switchToTabView(st, tab);
+  return view;
 }
 
 function normalizeUrl(url, { tor = false } = {}) {
@@ -268,20 +400,19 @@ function normalizeUrl(url, { tor = false } = {}) {
  * Load content into a specific tab's view
  */
 function loadTabContent(st, tab) {
-  const view = tab.view;
-  if (!view) return;
-  
   tab.blockedCount = 0;
-  const target = tab.url;
+  let target = tab.url;
 
+  if (st.isTor && !isAnonUrl(target) && !(torStatus && torStatus.ok)) {
+    target = 'anon://settings';
+    tab.url = target;
+    tab.title = 'Settings';
+  }
+
+  const view = ensureTabView(st, tab, isAnonUrl(target));
   if (isAnonUrl(target)) {
     view.webContents.loadFile(resolveAnonUrl(target));
     tab.title = anonTitle(target);
-  } else if (st.isTor && !(torStatus && torStatus.ok)) {
-    // Tor window but Tor is down - show settings
-    tab.url = 'anon://settings';
-    tab.title = 'Settings';
-    view.webContents.loadFile(resolveAnonUrl('anon://settings'));
   } else {
     view.webContents.loadURL(target);
   }
@@ -293,8 +424,12 @@ function loadTabContent(st, tab) {
  */
 function switchToTabView(st, tab) {
   if (!tab.view) return;
+  for (const candidate of st.tabs) {
+    candidate.view?.setVisible(candidate === tab);
+  }
   st.activeView = tab.view;
-  st.win.setBrowserView(tab.view);
+  // Re-adding an existing child moves it to the top of the native view stack.
+  st.win.contentView.addChildView(tab.view);
   layoutContent(st);
   broadcast(st);
 }
@@ -322,47 +457,19 @@ function loadInContent(st, url) {
 function createTab(st, url = HOME_URL) {
   const id = `t${++st.tabSeq}`;
   const normalizedUrl = normalizeUrl(url, { tor: st.isTor });
-  const isInternal = isAnonUrl(normalizedUrl);
-  
-  // Create appropriate view for this tab
-  const ses = sessionFor(st.mode);
-  const view = new BrowserView({
-    webPreferences: {
-      preload: path.join(__dirname, isInternal ? 'preload-internal.js' : 'preload-content.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-      plugins: true,
-      session: ses,
-    },
-  });
-  
-  // Track internal views
-  if (isInternal) {
-    internalWebContents.add(view.webContents.id);
-  }
-  
   const tab = {
     id,
     url: normalizedUrl,
     title: isAnonUrl(normalizedUrl) ? anonTitle(normalizedUrl) : 'New Tab',
-    view,
-    isInternal,
+    view: null,
+    isInternal: false,
     blockedCount: 0,
   };
-  
+
   st.tabs.push(tab);
   st.activeTabId = id;
-  
-  // Attach listeners to this tab's view
-  attachContentListeners(st, view, tab);
-  
-  // Load content in the new view
   loadTabContent(st, tab);
-  
-  // Switch to this tab's view
   switchToTabView(st, tab);
-  
   return tab;
 }
 
@@ -372,15 +479,7 @@ function closeTab(st, id) {
   
   const tab = st.tabs[idx];
   
-  // Clean up the tab's view
-  if (tab.view) {
-    if (tab.isInternal) {
-      internalWebContents.delete(tab.view.webContents.id);
-    }
-    // Note: BrowserView cleanup happens automatically when window closes
-    // or when we set a different view
-  }
-  
+  destroyTabView(st, tab);
   st.tabs.splice(idx, 1);
   
   if (st.tabs.length === 0) {
@@ -408,7 +507,7 @@ function switchTab(st, id) {
   switchToTabView(st, tab);
 }
 
-const WEB_PROTOCOLS = /^(https?|file|about|blob|data|chrome|devtools):/i;
+const WEB_PROTOCOLS = /^(https?|about|blob|data):/i;
 
 function promptExternalProtocol(st, url) {
   const protocol = url.split(':', 1)[0] + ':';
@@ -426,6 +525,41 @@ function promptExternalProtocol(st, url) {
     });
 }
 
+/**
+ * Keep content pages on a light canvas. CDP debugger Emulation is intentionally
+ * NOT used: under sandbox, webContents.debugger.attach() hangs and can stall
+ * later insertCSS / navigation.
+ */
+/** Always-on CSS so dark window chrome cannot paint a dark UA canvas under pages. */
+const LIGHT_PAGE_CSS = `
+  html {
+    color-scheme: only light !important;
+    background-color: #ffffff !important;
+  }
+`;
+
+/**
+ * Inject light-scheme CSS + EasyList/site cosmetics when Shields are on.
+ * @param {WindowState} st
+ * @param {{ url: string, view: Electron.WebContentsView }} tab
+ */
+function injectCosmetics(st, tab) {
+  const view = tab?.view;
+  const wc = view?.webContents;
+  if (!wc || wc.isDestroyed()) return;
+  const url = tab.url;
+  if (!url || isAnonUrl(url)) return;
+
+  // Always force light page canvas (independent of Shields) — readability first.
+  wc.insertCSS(LIGHT_PAGE_CSS).catch(() => {});
+
+  if (!shieldsForUrl(url)) return;
+  const css = `${cosmeticStylesForUrl(url)}\n${siteCosmeticCss(url)}`.trim();
+  if (css) wc.insertCSS(css).catch(() => {});
+  const script = siteCosmeticScript(url);
+  if (script) wc.executeJavaScript(script, true).catch(() => {});
+}
+
 function attachContentListeners(st, view, tab) {
   const wc = view.webContents;
   wc.setWindowOpenHandler(({ url }) => {
@@ -437,6 +571,27 @@ function attachContentListeners(st, view, tab) {
     return { action: 'deny' };
   });
   wc.on('will-navigate', (e, url) => {
+    const crossesTrustBoundary =
+      (tab.isInternal && !isTrustedInternalFileUrl(url)) ||
+      (!tab.isInternal && isAnonUrl(url));
+    if (crossesTrustBoundary) {
+      e.preventDefault();
+      if (WEB_PROTOCOLS.test(url) || isAnonUrl(url)) {
+        setImmediate(() => {
+          if (st.tabs.includes(tab) && !st.win.isDestroyed()) {
+            tab.url = url;
+            loadTabContent(st, tab);
+          }
+        });
+      } else if (!url.startsWith('file:')) {
+        promptExternalProtocol(st, url);
+      }
+      return;
+    }
+    if (!tab.isInternal && url.startsWith('file:')) {
+      e.preventDefault();
+      return;
+    }
     if (!WEB_PROTOCOLS.test(url) && !isAnonUrl(url)) {
       e.preventDefault();
       promptExternalProtocol(st, url);
@@ -458,6 +613,8 @@ function attachContentListeners(st, view, tab) {
       tab.url = url;
       if (st.mode === 'normal') store.recordHistory(tab.title, url);
       broadcast(st);
+      // Early light-scheme CSS (before paint finishes)
+      if (!isAnonUrl(url)) wc.insertCSS(LIGHT_PAGE_CSS).catch(() => {});
     }
   });
   wc.on('did-navigate-in-page', (_e, url) => {
@@ -478,6 +635,8 @@ function attachContentListeners(st, view, tab) {
       });
     }
   });
+  wc.on('dom-ready', () => injectCosmetics(st, tab));
+  wc.on('did-finish-load', () => injectCosmetics(st, tab));
   wc.on('did-start-loading', () => {
     if (tab) tab.blockedCount = 0;
     sendChrome(st, 'chrome:loading', { loading: true });
@@ -551,7 +710,7 @@ function setupSessionPrivacy(ses, mode = 'normal') {
 /**
  * @param {'normal' | 'private' | 'tor'} mode
  * @param {string | null} startUrl
- * @returns {Promise<BrowserWindow>}
+ * @returns {Promise<Electron.BaseWindow>}
  */
 async function createBrowserWindow(mode = 'normal', startUrl = null) {
   if (mode === 'tor') {
@@ -561,15 +720,20 @@ async function createBrowserWindow(mode = 'normal', startUrl = null) {
   const bg =
     mode === 'tor' ? '#0c1410' : mode === 'private' ? '#12101a' : '#0a0a0b';
 
-  const win = new BrowserWindow({
+  // BaseWindow + sibling WebContentsViews: BrowserWindow's own webContents
+  // paints over contentView children on Electron 43, so pages never appear.
+  const win = new BaseWindow({
+    show: !IS_SMOKE_TEST,
     width: 1280,
     height: 840,
     minWidth: 900,
     minHeight: 600,
     backgroundColor: bg,
-    icon: APP_ICON,
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
     trafficLightPosition: { x: 16, y: 18 },
+  });
+
+  const chromeView = new WebContentsView({
     webPreferences: {
       preload: path.join(__dirname, 'preload-chrome.js'),
       contextIsolation: true,
@@ -577,8 +741,11 @@ async function createBrowserWindow(mode = 'normal', startUrl = null) {
       sandbox: true,
     },
   });
+  chromeView.setBackgroundColor(bg.length === 7 ? `${bg}ff` : bg);
+  win.contentView.addChildView(chromeView);
 
   const st = new WindowState(win, mode);
+  st.chromeView = chromeView;
   st.pendingUrl = startUrl;
   windows.set(win.id, st);
 
@@ -588,24 +755,27 @@ async function createBrowserWindow(mode = 'normal', startUrl = null) {
     await applyTorProxy(ses, { host: torStatus.host, port: torStatus.port });
   }
 
-  // Views are now created per-tab in createTab()
-
-  win.loadFile(path.join(__dirname, '../renderer/chrome.html'));
+  layoutContent(st);
+  chromeView.webContents.loadFile(path.join(__dirname, '../renderer/chrome.html'));
   win.on('resize', () => layoutContent(st));
   win.on('closed', () => {
+    // Do not call webContents.close() here — tearing down child views while the
+    // BaseWindow is already closing deadlocks on Electron 43.
     windows.delete(win.id);
-    // Clean up all tab views
     for (const tab of st.tabs) {
-      if (tab.view && tab.isInternal) {
+      if (tab.view) {
         internalWebContents.delete(tab.view.webContents.id);
+        tab.view = null;
       }
     }
     st.tabs = [];
     st.activeView = null;
+    st.chromeView = null;
   });
 
-  win.webContents.on('did-finish-load', () => {
+  chromeView.webContents.on('did-finish-load', () => {
     st.chromeReady = true;
+    layoutContent(st);
     if (st.tabs.length === 0) {
       let start = HOME_URL;
       if (st.pendingUrl) {
@@ -626,7 +796,7 @@ async function createBrowserWindow(mode = 'normal', startUrl = null) {
 }
 
 function focusedState() {
-  const focused = BrowserWindow.getFocusedWindow();
+  const focused = BaseWindow.getFocusedWindow();
   if (focused && windows.has(focused.id)) return windows.get(focused.id);
   return windows.values().next().value || null;
 }
@@ -693,7 +863,7 @@ function shieldsPanelInfo() {
     internal: !tab || isAnonUrl(tab.url),
     siteOn: tab ? shieldsForUrl(tab.url) : false,
     globalOn: !!store.settings.globalShields,
-    blocked: st.blockedThisLoad,
+    blocked: tab?.blockedCount || 0,
     engine: engineStatus(),
   };
 }
@@ -701,11 +871,22 @@ function shieldsPanelInfo() {
 // ---------------------------------------------------------------------------
 
 function registerIpc() {
-  // Navigation - chrome UI only
+  // Chrome and trusted internal pages may navigate their own window.
   ipcMain.handle('nav:goto', (e, url) => {
-    if (!isChromeSender(e)) return;
+    if (!isInternalSender(e)) return false;
     const st = stateForEvent(e);
-    if (st) loadInContent(st, String(url || HOME_URL));
+    if (!st) return false;
+    const target = String(url || HOME_URL);
+    if (isChromeSender(e)) {
+      loadInContent(st, target);
+    } else {
+      // Let ipcRenderer.invoke resolve before a trust-boundary navigation
+      // closes and replaces the internal sender's WebContents.
+      setImmediate(() => {
+        if (!st.win.isDestroyed()) loadInContent(st, target);
+      });
+    }
+    return true;
   });
   ipcMain.handle('nav:back', (e) => {
     if (!isChromeSender(e)) return;
@@ -1216,7 +1397,7 @@ function buildMenu() {
         {
           label: 'Toggle Developer Tools',
           accelerator: 'Alt+CmdOrCtrl+I',
-          click: () => focusedState()?.win.webContents.toggleDevTools(),
+          click: () => focusedState()?.chromeWebContents()?.toggleDevTools(),
         },
       ],
     },
@@ -1252,6 +1433,11 @@ function buildMenu() {
 
 app.whenReady().then(async () => {
   app.setName('Anon Browser');
+  // Keep websites in light color-scheme even when macOS / chrome UI is dark.
+  nativeTheme.themeSource = 'light';
+  nativeTheme.on('updated', () => {
+    if (nativeTheme.themeSource !== 'light') nativeTheme.themeSource = 'light';
+  });
   // Pre-masked squircle PNG (transparent corners) via dock.setIcon.
   if (process.platform === 'darwin' && app.dock) {
     const icon = nativeImage.createFromPath(APP_ICON);
@@ -1268,11 +1454,36 @@ app.whenReady().then(async () => {
     if (wallet.maybeAutoLock()) broadcastAll();
   }, 60 * 1000);
 
+  if (IS_SMOKE_TEST) {
+    try {
+      const { runElectronSmoke } = require('../test/electron-smoke');
+      await runElectronSmoke({
+        app,
+        windows,
+        createBrowserWindow,
+        activeTab,
+        createTab,
+        closeTab,
+        switchTab,
+        loadInContent,
+        sessionFor,
+        wallet,
+        smokeRoot: SMOKE_ROOT,
+      });
+    } catch (err) {
+      console.error('Electron smoke failed:', err?.stack || err);
+      process.exitCode = 1;
+    } finally {
+      app.quit();
+    }
+    return;
+  }
+
   refreshTorStatus().finally(() => {
     createBrowserWindow('normal');
   });
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createBrowserWindow('normal');
+    if (BaseWindow.getAllWindows().length === 0) createBrowserWindow('normal');
   });
 });
 

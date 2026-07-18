@@ -104,4 +104,31 @@ function engineStatus() {
   return status;
 }
 
-module.exports = { initFilterEngine, engineMatch, engineStatus };
+/**
+ * Cosmetic (element-hiding) styles for a page URL.
+ * @param {string} pageUrl
+ * @returns {string} CSS to insert, or ''
+ */
+function cosmeticStylesForUrl(pageUrl) {
+  if (!engine || !pageUrl || !/^https?:/i.test(pageUrl)) return '';
+  try {
+    const { hostname } = new URL(pageUrl);
+    const { getDomain } = require('tldts-experimental');
+    const domain = getDomain(hostname) || hostname;
+    const { styles } = engine.getCosmeticsFilters({
+      url: pageUrl,
+      hostname,
+      domain,
+      getBaseRules: true,
+      getInjectionRules: false,
+      getExtendedRules: false,
+      getRulesFromDOM: false,
+      getRulesFromHostname: true,
+    });
+    return styles || '';
+  } catch {
+    return '';
+  }
+}
+
+module.exports = { initFilterEngine, engineMatch, engineStatus, cosmeticStylesForUrl };

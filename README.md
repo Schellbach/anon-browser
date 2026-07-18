@@ -13,7 +13,13 @@ npm start
 cd site && npm install && npm run dev
 ```
 
-Node 20+. Scripts unset `ELECTRON_RUN_AS_NODE` (required under Cursor).
+Node 22.12+. Scripts unset `ELECTRON_RUN_AS_NODE` (required under Cursor).
+The desktop runtime is pinned to **Electron 43.1.1 / Chromium 150**; weekly
+Dependabot checks keep Electron updates visible.
+
+```bash
+npm test   # unit suite + real Electron runtime smoke
+```
 
 ## Features (v0.3, Wave 1)
 
@@ -26,10 +32,14 @@ Node 20+. Scripts unset `ELECTRON_RUN_AS_NODE` (required under Cursor).
 
 ```bash
 npm run pack   # dist/mac-arm64/Anon.app
-npm run dist   # dist/Anon-<version>.dmg
+npm run dist   # dist/Anon-<version>-arm64.dmg
 ```
 
-Bundles are branded (`Anon`, `computer.anon.browser`, baked `brand/icon.icns`). macOS signing/notarization needs Apple certs (currently ad-hoc, `identity: null`).
+Bundles are branded (`Anon`, `computer.anon.browser`, baked `brand/icon.icns`).
+Release builds are configured for Developer ID signing, Hardened Runtime, and
+Apple notarization through GitHub Actions. They remain unsigned until Anon
+Computer enrolls in the Apple Developer Program and configures the release
+secrets; see [`docs/04-macos-release.md`](./docs/04-macos-release.md).
 
 ## Tor
 
@@ -43,7 +53,8 @@ Settings → Vault switches new wallets between `mainnet` and `testnet` (uses me
 
 - Electron ceiling (not a Chromium/Brave daily-driver fork — yet, and maybe never)
 - Hot wallet risk class; clearnet mempool.space for chain data (see [`docs/03-threat-model.md`](./docs/03-threat-model.md))
-- Not notarized for Gatekeeper-friendly stranger installs
+- Reduced Chromium user agent removes the Electron token, but does not make the runtime indistinguishable from Chrome or Brave
+- Current downloads are not signed or notarized until Apple Developer enrollment is complete
 
 **Next:** Wave 2 engine bake-off in `PLAN.md` — score Electron deepen / CEF / WebView / Gecko / Ladybird / hybrid with agents; pick by evidence.
 

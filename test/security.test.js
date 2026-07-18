@@ -6,8 +6,8 @@ const assert = require('node:assert');
  * 
  * These test the security boundaries documented in P0.
  * 
- * Full Electron integration tests would require Spectron/Playwright setup.
- * For now, we document the expected behavior and provide basic validation.
+ * The source checks here supplement test/electron-smoke.js, which exercises
+ * these boundaries in the real pinned Electron runtime.
  */
 
 describe('security boundaries - preload isolation', () => {
@@ -59,6 +59,20 @@ describe('security boundaries - IPC gating', () => {
     
     // tabs:state should check isChromeSender (exposes sensitive data)
     assert.strictEqual(mainJs.includes('tabs:state'), true);
+  });
+
+  it('replaces web contents when a tab crosses preload trust classes', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const mainJs = fs.readFileSync(
+      path.join(__dirname, '../src/main.js'),
+      'utf8'
+    );
+
+    assert.strictEqual(mainJs.includes('new WebContentsView('), true);
+    assert.strictEqual(mainJs.includes('new BrowserView('), false);
+    assert.strictEqual(mainJs.includes('function ensureTabView('), true);
+    assert.strictEqual(mainJs.includes('destroyTabView(st, tab);'), true);
   });
 });
 

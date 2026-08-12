@@ -1,6 +1,7 @@
 {
   "name": "anon-browser",
   "productName": "Anon",
+  "desktopName": "Anon.desktop",
   "version": "0.3.0",
   "description": "Anon Browser — privacy browser with a built-in Bitcoin Vault",
   "main": "src/main.js",
@@ -12,8 +13,11 @@
     "start": "env -u ELECTRON_RUN_AS_NODE electron .",
     "predev": "node scripts/brand-electron-app.js",
     "dev": "env -u ELECTRON_RUN_AS_NODE electron . --dev",
-    "pack": "env -u ELECTRON_RUN_AS_NODE electron-builder --dir",
-    "dist": "env -u ELECTRON_RUN_AS_NODE electron-builder --mac dmg",
+    "pack": "env -u ELECTRON_RUN_AS_NODE electron-builder --dir --publish never",
+    "dist": "npm run dist:mac",
+    "dist:mac": "env -u ELECTRON_RUN_AS_NODE CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac dmg zip --arm64 --publish never",
+    "dist:mac:signed": "env -u ELECTRON_RUN_AS_NODE electron-builder --mac dmg --arm64 --publish never",
+    "dist:linux": "env -u ELECTRON_RUN_AS_NODE electron-builder --linux AppImage tar.gz --x64 --publish never",
     "test": "npm run test:unit && npm run test:electron",
     "test:unit": "node --test test/*.test.js",
     "test:electron": "node test/run-electron-smoke.js"
@@ -45,11 +49,49 @@
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "entitlements": "entitlements.mac.plist",
-      "entitlementsInherit": "entitlements.mac.plist"
+      "entitlementsInherit": "entitlements.mac.plist",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
+      "artifactName": "Anon-${version}-${arch}-mac.${ext}"
     },
     "dmg": {
       "title": "Anon"
-    }
+    },
+    "linux": {
+      "icon": "brand/icon.png",
+      "category": "Network",
+      "maintainer": "Anon Computer, Inc.",
+      "executableName": "anon",
+      "syncDesktopName": true,
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "tar.gz",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "Anon-${version}-${arch}-linux.${ext}"
+    },
+    "publish": null
   },
   "dependencies": {
     "@ghostery/adblocker": "^2.18.1",

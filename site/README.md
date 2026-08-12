@@ -33,11 +33,14 @@ netlify deploy --prod --dir dist --no-build
 
 ## Downloads
 
-Platform buttons point at GitHub Releases:
+`src/lib/downloads.ts` points macOS / Linux CTAs at versioned GitHub Release
+assets (see repo `docs/05-packaging.md`). Push a `v*` tag to publish those
+files via the Preview release workflow.
 
-`https://github.com/Schellbach/anon-browser/releases/latest`
+Until a release exists, those URLs 404 — cut `v0.3.0` (or bump `VERSION`) first.
 
-Update `src/lib/downloads.ts` when Windows/Linux builds ship, or when you host DMGs on a CDN.
+Windows remains “Coming soon.” After notarized Mac builds ship, update the macOS
+`detail` string and optionally keep the same asset name.
 
 ## Brand
 

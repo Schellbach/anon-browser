@@ -75,8 +75,9 @@ git push origin v0.3.0
 
 That triggers **Preview release** (`.github/workflows/release-preview.yml`), which:
 
-1. Builds Linux AppImage + tar.gz on Ubuntu
-2. Builds unsigned macOS DMG + zip on `macos-14`
+1. Runs unit tests, then builds Linux AppImage + tar.gz on Ubuntu
+2. Runs unit tests, then builds unsigned macOS DMG + zip on `macos-14`
+   (Electron GUI smoke stays on the PR `Electron runtime` workflow)
 3. Creates a **prerelease** on GitHub with those assets + `SHA256SUMS`
 
 Manual dry-run without a tag: Actions → **Preview release** → Run workflow.

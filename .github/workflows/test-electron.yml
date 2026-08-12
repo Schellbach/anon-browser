@@ -17,7 +17,7 @@ jobs:
   test:
     name: macOS Electron + pack
     runs-on: macos-14
-    timeout-minutes: 20
+    timeout-minutes: 45
 
     steps:
       - name: Check out source
@@ -32,8 +32,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Test unit and Electron boundaries
-        run: npm test
+      - name: Unit tests
+        run: npm run test:unit
 
       - name: Package application
         run: npm run pack -- --arm64
@@ -44,6 +44,9 @@ jobs:
           actual="$(plutil -extract CFBundleVersion raw \
             "dist/mac-arm64/Anon.app/Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/Info.plist")"
           test "${actual}" = "${expected}"
+
+      - name: Electron smoke
+        run: npm run test:electron
 
   linux-package:
     name: Linux AppImage package

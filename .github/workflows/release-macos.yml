@@ -65,7 +65,7 @@ jobs:
           echo "APPLE_API_KEY=${key_path}" >> "${GITHUB_ENV}"
 
       - name: Test
-        run: npm test
+        run: npm run test:unit
 
       - name: Build, sign, and notarize
         env:

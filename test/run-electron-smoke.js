@@ -16,8 +16,13 @@ delete env.ELECTRON_RUN_AS_NODE;
 const brand = spawnSync(
   process.execPath,
   [path.join(root, 'scripts', 'brand-electron-app.js')],
-  { cwd: root, env, stdio: 'inherit' }
+  { cwd: root, env, stdio: 'inherit', timeout: 60_000 }
 );
+if (brand.error) {
+  fs.rmSync(smokeRoot, { recursive: true, force: true });
+  console.error(brand.error);
+  process.exit(1);
+}
 if (brand.status !== 0) {
   fs.rmSync(smokeRoot, { recursive: true, force: true });
   process.exit(brand.status || 1);

@@ -16,8 +16,13 @@ delete env.ELECTRON_RUN_AS_NODE;
 const brand = spawnSync(
   process.execPath,
   [path.join(root, 'scripts', 'brand-electron-app.js')],
-  { cwd: root, env, stdio: 'inherit' }
+  { cwd: root, env, stdio: 'inherit', timeout: 60_000 }
 );
+if (brand.error) {
+  fs.rmSync(smokeRoot, { recursive: true, force: true });
+  console.error(brand.error);
+  process.exit(1);
+}
 if (brand.status !== 0) {
   fs.rmSync(smokeRoot, { recursive: true, force: true });
   process.exit(brand.status || 1);
@@ -39,16 +44,30 @@ child.stderr.on('data', (chunk) => process.stderr.write(chunk));
 
 let timedOut = false;
 let forceKillTimer;
+let exitTimer;
 const timer = setTimeout(() => {
   timedOut = true;
   console.error('Electron smoke test exceeded 120 seconds');
   child.kill('SIGTERM');
-  forceKillTimer = setTimeout(() => child.kill('SIGKILL'), 3_000);
+  forceKillTimer = setTimeout(() => {
+    child.kill('SIGKILL');
+    // If Electron is stuck in an uninterruptible state, still fail the job.
+    exitTimer = setTimeout(() => {
+      try {
+        fs.rmSync(smokeRoot, { recursive: true, force: true });
+      } catch {
+        // ignore cleanup errors on forced exit
+      }
+      console.error('Electron smoke test force-exiting after kill');
+      process.exit(1);
+    }, 2_000);
+  }, 3_000);
 }, 120_000);
 
 child.once('error', (error) => {
   clearTimeout(timer);
   clearTimeout(forceKillTimer);
+  clearTimeout(exitTimer);
   fs.rmSync(smokeRoot, { recursive: true, force: true });
   console.error(error);
   process.exitCode = 1;
@@ -57,6 +76,7 @@ child.once('error', (error) => {
 child.once('exit', (code, signal) => {
   clearTimeout(timer);
   clearTimeout(forceKillTimer);
+  clearTimeout(exitTimer);
   fs.rmSync(smokeRoot, { recursive: true, force: true });
   if (timedOut) {
     process.exitCode = 1;

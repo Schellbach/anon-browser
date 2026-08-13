@@ -2,7 +2,11 @@
 
 Anon uses `electron-builder` to produce a Developer ID-signed, hardened, and
 Apple-notarized Apple Silicon DMG. Signing and notarization run in the
-`Signed macOS release` GitHub Actions workflow.
+**Signed macOS release** GitHub Actions workflow (`workflow_dispatch` only).
+
+For downloadable **unsigned** macOS + Linux builds that do not need this
+setup, see [`docs/05-packaging.md`](./05-packaging.md) and the **Preview
+release** workflow.
 
 ## Current blocker
 
@@ -10,9 +14,9 @@ Anon Computer needs an active [Apple Developer Program][developer-program]
 membership. Apple will not issue a Developer ID Application certificate or
 accept a notarization submission without one.
 
-Repository configuration is ready, but builds remain unsigned and
-unnotarized until the membership and GitHub release secrets below are in
-place.
+Repository signing config is ready, but notarized builds remain blocked until
+the membership and GitHub `release` environment secrets below are in place.
+Unsigned preview Releases can ship without them.
 
 ## One-time Apple setup
 
@@ -57,7 +61,8 @@ Paste each clipboard value directly into its corresponding GitHub secret.
 
 ## Release workflow
 
-The workflow can be started manually for a private validation build. It:
+Start **Signed macOS release** manually from the Actions tab (requires the
+`release` environment secrets). It:
 
 1. Installs dependencies and runs the test suite.
 2. Imports the Developer ID certificate through `electron-builder`.
@@ -65,11 +70,13 @@ The workflow can be started manually for a private validation build. It:
 4. Submits the signed app to Apple's notary service using the API key.
 5. Staples and validates the notarization ticket.
 6. Verifies the signature with `codesign` and Gatekeeper with `spctl`.
-7. Generates `SHA256SUMS` and uploads it with the signed DMG as a GitHub
-   Actions artifact.
+7. Generates checksums and uploads the signed DMG as a workflow artifact.
+8. Attaches the DMG to the GitHub Release for `v<package.json version>`
+   (creates the release if needed) and clears the prerelease flag.
 
-Pushing a tag such as `v0.3.0` performs the same checks and publishes the DMG
-to that GitHub Release. The tag should match the version in `package.json`.
+Unsigned preview assets are published separately when you push a `v*` tag
+(see [`docs/05-packaging.md`](./05-packaging.md)). Keep `package.json`
+`version` aligned with that tag.
 
 ## Local verification
 

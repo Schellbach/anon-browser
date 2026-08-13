@@ -15,7 +15,7 @@ export default function Download() {
     <section className="section download" id="download">
       <div className="section-inner download-inner">
         <h2 className="section-title">Get Anon.</h2>
-        <p className="section-lede">Free for Mac. Open source.</p>
+        <p className="section-lede">Free for Mac and Linux. Open source. Mac builds are unsigned preview until notarized.</p>
         <a href={primary.href} className="btn btn-primary btn-lg download-primary">
           Download for {primary.label}
         </a>
